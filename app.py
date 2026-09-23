@@ -3,16 +3,13 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-st.set_page_config(
-    page_title="Control y Análisis GAP - Ventas", 
-    layout="wide", 
-    initial_sidebar_state="expanded"
-)
+# Configuración de página
+st.set_page_config(page_title="Tablero de Desempeño de Ventas", layout="wide")
 
-st.title("📊 Tablero de Control Gerencial y Análisis GAP")
+st.markdown("<h2 style='text-align: center; color: #1E3A8A;'>TABLERO DE DESEMPEÑO DE VENTAS: ANÁLISIS GAP SEMANAL</h2>", unsafe_allow_html=True)
 
-# 1. FUNCIÓN DE LIMPIEZA DE MONEDA (Corrige el formato $4M vs Cifras Completa)
-def convertir_moneda_a_pesos(val):
+# 1. FUNCIÓN DE CONVERSIÓN MONETARIA
+def limpiar_monto(val):
     if pd.isna(val):
         return 0.0
     s = str(val).replace('$', '').replace(',', '').strip()
@@ -27,9 +24,8 @@ def convertir_moneda_a_pesos(val):
     except:
         return 0.0
 
-# 2. CARGA DE ARCHIVO Y NORMALIACIÓN
 @st.cache_data
-def cargar_analisis_gap(file):
+def cargar_datos(file):
     xls = pd.ExcelFile(file)
     
     # Cargar Maestro BASE DE DATOS
@@ -38,266 +34,221 @@ def cargar_analisis_gap(file):
         df_bd = pd.read_excel(xls, sheet_name='BASE DE DATOS')
         df_bd['Tienda_Clean'] = df_bd['Tienda'].astype(str).str.strip().str.upper()
     
-    ciclos = [s for s in xls.sheet_names if s != 'BASE DE DATOS']
+    hojas = [s for s in xls.sheet_names if s != 'BASE DE DATOS']
     dfs = []
     
-    for c in ciclos:
-        df = pd.read_excel(xls, sheet_name=c)
-        
-        # Limpieza de Tienda
+    for h in hojas:
+        df = pd.read_excel(xls, sheet_name=h)
         if 'Desglose (2)' in df.columns:
             df.rename(columns={'Desglose (2)': 'Tienda'}, inplace=True)
             
         df = df[df['Tienda'].notna()]
         df = df[~df['Tienda'].astype(str).str.contains('Total|general', case=False, na=False)]
         df['Tienda_Clean'] = df['Tienda'].astype(str).str.strip().str.upper()
-        df['Ciclo'] = str(c)
+        df['Ciclo'] = str(h)
         
-        # Limpieza de valores de Ventas y Presupuestos
-        df['Ventas_Real_$'] = df['Ventas Act'].apply(convertir_moneda_a_pesos)
-        df['Ppto_Real_$'] = df['Ppto'].apply(convertir_moneda_a_pesos)
+        # Parsear variables
+        df['Ventas_Real'] = df['Ventas Act'].apply(limpiar_monto)
+        df['Ppto_Real'] = df['Ppto'].apply(limpiar_monto)
         df['Transacciones_Real'] = pd.to_numeric(df['Transacciones Act'], errors='coerce').fillna(0)
-        df['Ticket_Real_$'] = pd.to_numeric(df['Ticket promedio Act'], errors='coerce').fillna(0)
+        df['Ticket_Real'] = pd.to_numeric(df['Ticket promedio Act'], errors='coerce').fillna(0)
         
         dfs.append(df)
         
     if dfs:
         df_tot = pd.concat(dfs, ignore_index=True)
-        # Cruce estricto con BASE DE DATOS para traer el Gerente y Supervisor correctos
         if not df_bd.empty:
-            cols_bd = ['Tienda_Clean', 'Gerente', 'Supervisor', 'Ciudad', 'Segmento', 'Comparable ', 'Pareto', 'Comparable sept']
-            cols_bd = [col for col in cols_bd if col in df_bd.columns]
+            cols_bd = ['Tienda_Clean', 'Gerente', 'Supervisor', 'Ciudad', 'Segmento', 'Comparable ', 'Pareto']
+            cols_bd = [c for c in cols_bd if c in df_bd.columns]
             df_tot = pd.merge(df_tot, df_bd[cols_bd], on='Tienda_Clean', how='left')
-            
-        return df_tot, ciclos
+        return df_tot, hojas
     return pd.DataFrame(), []
 
-# Sidebar para cargar archivo
-st.sidebar.header("📁 Cargar Información")
-uploaded_file = st.sidebar.file_uploader("Sube ANALISIS GAP.xlsx", type=['xlsx'])
+# Carga de archivo en la barra lateral
+st.sidebar.header("📁 Cargar Excel")
+uploaded_file = st.sidebar.file_uploader("Sube el archivo ANALISIS GAP.xlsx", type=['xlsx'])
 
 if uploaded_file:
-    df_data, lista_ciclos = cargar_analisis_gap(uploaded_file)
+    df_tot, lista_ciclos = cargar_datos(uploaded_file)
     
-    if len(lista_ciclos) < 2:
-        st.warning("⚠️ Debes tener al menos 2 pestañas de fechas/ciclos para el Análisis GAP.")
-    else:
-        st.sidebar.header("⚙️ Configuración del Análisis")
+    if len(lista_ciclos) >= 2:
+        c_act = st.sidebar.selectbox("Semana/Ciclo Actual:", lista_ciclos, index=len(lista_ciclos)-1)
+        c_ant = st.sidebar.selectbox("Semana/Ciclo Anterior:", lista_ciclos, index=max(0, len(lista_ciclos)-2))
         
-        # Selección de Ciclos
-        c_act = st.sidebar.selectbox("Fecha Evaluada (Actual):", lista_ciclos, index=len(lista_ciclos)-1)
-        c_ant = st.sidebar.selectbox("Fecha Comparativa (Anterior):", lista_ciclos, index=max(0, len(lista_ciclos)-2))
+        # Datasets
+        df_act = df_tot[df_tot['Ciclo'] == c_act].copy()
+        df_ant = df_tot[df_tot['Ciclo'] == c_ant].copy()
         
-        # Datasets separados
-        df_act = df_data[df_data['Ciclo'] == c_act].copy()
-        df_ant = df_data[df_data['Ciclo'] == c_ant].copy()
-        
-        # Cruce de Fechas por Tienda
+        # Cruce
         df_merged = pd.merge(
-            df_act[['Tienda_Clean', 'Tienda', 'Gerente', 'Supervisor', 'Ciudad', 'Segmento', 'Comparable ', 'Pareto', 'Ventas_Real_$', 'Ppto_Real_$', 'Transacciones_Real', 'Ticket_Real_$']],
-            df_ant[['Tienda_Clean', 'Ventas_Real_$', 'Ppto_Real_$', 'Transacciones_Real', 'Ticket_Real_$']],
+            df_act[['Tienda_Clean', 'Tienda', 'Gerente', 'Supervisor', 'Ciudad', 'Segmento', 'Pareto', 'Ventas_Real', 'Ppto_Real', 'Transacciones_Real', 'Ticket_Real']],
+            df_ant[['Tienda_Clean', 'Ventas_Real', 'Ppto_Real', 'Transacciones_Real', 'Ticket_Real']],
             on='Tienda_Clean',
             suffixes=('_Act', '_Ant'),
             how='inner'
         )
         
-        # Cálculos de GAP y Variaciones Reales
-        df_merged['GAP_Ppto_$'] = df_merged['Ventas_Real_$_Act'] - df_merged['Ppto_Real_$_Act']
-        df_merged['Cumplimiento_%'] = (df_merged['Ventas_Real_$_Act'] / df_merged['Ppto_Real_$_Act'].replace(0, 1)) * 100
+        # FILTROS SUPERIORES EN LÍNEA (Como la imagen de referencia)
+        st.markdown("---")
+        f1, f2, f3 = st.columns(3)
+        with f1:
+            gerentes = ["Todos"] + sorted([x for x in df_merged['Gerente'].dropna().unique()])
+            sel_ger = st.selectbox("GERENTE SUPERVISOR (Desglose 1):", gerentes)
+        with f2:
+            supervisores = ["Todos"] + sorted([x for x in df_merged['Supervisor'].dropna().unique()])
+            sel_sup = st.selectbox("SUPERVISOR:", supervisores)
+        with f3:
+            tiendas = ["Todas"] + sorted([x for x in df_merged['Tienda'].dropna().unique()])
+            sel_tienda = st.selectbox("TIENDA / PUNTO (Desglose 2):", tiendas)
+            
+        # Filtrado
+        df_f = df_merged.copy()
+        if sel_ger != "Todos":
+            df_f = df_f[df_f['Gerente'] == sel_ger]
+        if sel_sup != "Todos":
+            df_f = df_f[df_f['Supervisor'] == sel_sup]
+        if sel_tienda != "Todas":
+            df_f = df_f[df_f['Tienda'] == sel_tienda]
+
+        # Cálculos de Indicadores Totales
+        v_act = df_f['Ventas_Real_Act'].sum()
+        v_ant = df_f['Ventas_Real_Ant'].sum()
+        ppto_act = df_f['Ppto_Real_Act'].sum()
+        trans_act = df_f['Transacciones_Real_Act'].sum()
+        trans_ant = df_f['Transacciones_Real_Ant'].sum()
         
-        df_merged['Var_Ventas_$'] = df_merged['Ventas_Real_$_Act'] - df_merged['Ventas_Real_$_Ant']
-        df_merged['Var_Ventas_%'] = (df_merged['Var_Ventas_$'] / df_merged['Ventas_Real_$_Ant'].replace(0, 1)) * 100
+        var_v_pct = ((v_act - v_ant) / v_ant * 100) if v_ant > 0 else 0.0
+        cumpl_ppto = (v_act / ppto_act * 100) if ppto_act > 0 else 0.0
+        var_trans_pct = ((trans_act - trans_ant) / trans_ant * 100) if trans_ant > 0 else 0.0
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # -------------------------------------------------------------
+        # FILA 1: TARJETAS DE KPIS (VENTAS, CRECIMIENTO, PPTO, TRANSACCIONES)
+        # -------------------------------------------------------------
+        k1, k2, k3, k4 = st.columns([1, 1, 1.2, 1])
         
-        df_merged['Var_Trans'] = df_merged['Transacciones_Real_Act'] - df_merged['Transacciones_Real_Ant']
-        df_merged['Var_Ticket'] = df_merged['Ticket_Real_$_Act'] - df_merged['Ticket_Real_$_Ant']
+        with k1:
+            st.markdown(f"""
+            <div style="background-color: #F3F4F6; padding: 15px; border-radius: 10px; text-align: center;">
+                <p style="margin:0; font-weight:bold; color:#374151;">VENTAS ACTUALES (SEM. ACTUAL)</p>
+                <h2 style="margin:5px 0; color:#111827;">${v_act:,.0f}</h2>
+                <p style="margin:0; font-weight:bold; color:{'#16A34A' if var_v_pct>=0 else '#DC2626'};">
+                    {'⬆' if var_v_pct>=0 else '⬇'} {var_v_pct:+.1f}% vs. Anterior
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
 
-        # --- NAVEGACIÓN PRINCIPAL ---
-        tab1, tab2, tab3, tab4 = st.tabs([
-            "👔 Resumen por Gerencia", 
-            "🏬 Análisis por Tiendas & GAP", 
-            "🎟️ Transacciones & Ticket Promedio", 
-            "🔍 Matriz General & Filtros"
-        ])
+        with k2:
+            st.markdown(f"""
+            <div style="background-color: #F3F4F6; padding: 15px; border-radius: 10px; text-align: center;">
+                <p style="margin:0; font-weight:bold; color:#374151;">CRECIMIENTO % (VS SEM. ANTERIOR)</p>
+                <h1 style="margin:10px 0; color:{'#16A34A' if var_v_pct>=0 else '#DC2626'};">{var_v_pct:+.1f}%</h1>
+            </div>
+            """, unsafe_allow_html=True)
 
-        # -------------------------------------------------------------
-        # PESTAÑA 1: RESUMEN GENERAL POR GERENCIA
-        # -------------------------------------------------------------
-        with tab1:
-            st.subheader(f"👔 Desempeño Consolidado Gerencial ({c_act} vs {c_ant})")
-            
-            # Agrupado por Gerente
-            df_ger = df_merged.groupby('Gerente', dropna=False).agg(
-                Ventas_Actuales=('Ventas_Real_$_Act', 'sum'),
-                Presupuesto_Actual=('Ppto_Real_$_Act', 'sum'),
-                GAP_Presupuesto=('GAP_Ppto_$', 'sum'),
-                Ventas_Anteriores=('Ventas_Real_$_Ant', 'sum'),
-                Crecimiento_Ventas=('Var_Ventas_$', 'sum'),
-                Transacciones=('Transacciones_Real_Act', 'sum')
-            ).reset_index()
-            
-            df_ger['Cumplimiento_%'] = (df_ger['Ventas_Actuales'] / df_ger['Presupuesto_Actual'].replace(0, 1)) * 100
-            df_ger['Crecimiento_%'] = (df_ger['Crecimiento_Ventas'] / df_ger['Ventas_Anteriores'].replace(0, 1)) * 100
+        with k3:
+            # Gráfico de Medidor / Gauge de Cumplimiento
+            fig_gauge = go.Figure(go.Indicator(
+                mode = "gauge+number",
+                value = cumpl_ppto,
+                number = {'suffix': "%", 'valueformat': ".1f"},
+                title = {'text': "CUMPLIMIENTO PPTO", 'font': {'size': 13}},
+                gauge = {
+                    'axis': {'range': [0, 120]},
+                    'bar': {'color': "#EAB308" if cumpl_ppto < 100 else "#16A34A"},
+                    'steps': [
+                        {'range': [0, 85], 'color': "#FEE2E2"},
+                        {'range': [85, 100], 'color': "#FEF3C7"},
+                        {'range': [100, 120], 'color': "#DCFCE7"}
+                    ]
+                }
+            ))
+            fig_gauge.update_layout(height=160, margin=dict(l=10, r=10, t=25, b=10))
+            st.plotly_chart(fig_gauge, use_container_width=True)
 
-            # Tarjetas Resumen Global
-            col1, col2, col3, col4 = st.columns(4)
-            col1.metric("Ventas Totales", f"${df_ger['Ventas_Actuales'].sum():,.0f}")
-            col2.metric("Presupuesto Total", f"${df_ger['Presupuesto_Actual'].sum():,.0f}")
-            col3.metric("GAP vs Presupuesto Total", f"${df_ger['GAP_Presupuesto'].sum():,.0f}", delta_color="normal")
-            col4.metric("Crecimiento vs Fecha Ant.", f"${df_ger['Crecimiento_Ventas'].sum():,.0f}", f"{((df_ger['Ventas_Actuales'].sum()/df_ger['Ventas_Anteriores'].sum().replace(0,1))-1)*100:.1f}%")
+        with k4:
+            st.markdown(f"""
+            <div style="background-color: #F3F4F6; padding: 15px; border-radius: 10px; text-align: center;">
+                <p style="margin:0; font-weight:bold; color:#374151;">TOTAL TRANSACCIONES</p>
+                <h2 style="margin:5px 0; color:#111827;">{trans_act:,.0f}</h2>
+                <p style="margin:0; font-weight:bold; color:{'#16A34A' if var_trans_pct>=0 else '#DC2626'};">
+                    {var_trans_pct:+.1f}%
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
 
-            st.markdown("---")
-
-            # Botones de Selección Visual
-            st.markdown("##### 🔘 Selecciona la métrica para comparar entre Gerencias:")
-            vista_gerencial = st.radio(
-                "", 
-                ["Cumplimiento vs Presupuesto (%)", "GAP Monetario vs Presupuesto ($)", "Crecimiento de Ventas vs Ciclo Anterior ($)"],
-                horizontal=True
-            )
-
-            if "Cumplimiento" in vista_gerencial:
-                fig = px.bar(
-                    df_ger.sort_values(by='Cumplimiento_%', ascending=False),
-                    x='Gerente', y='Cumplimiento_%', text_auto='.1f',
-                    color='Cumplimiento_%', color_continuous_scale='Greens',
-                    title="% Cumplimiento de Presupuesto por Gerencia"
-                )
-                fig.add_hline(y=100, line_dash="dash", line_color="red", annotation_text="Meta 100%")
-                st.plotly_chart(fig, use_container_width=True)
-                
-            elif "GAP Monetario" in vista_gerencial:
-                fig = px.bar(
-                    df_ger.sort_values(by='GAP_Presupuesto', ascending=False),
-                    x='Gerente', y='GAP_Presupuesto', text_auto='.2s',
-                    color='GAP_Presupuesto', color_continuous_scale='RdYlGn',
-                    title="GAP Monetario vs Presupuesto ($) por Gerencia"
-                )
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                fig = px.bar(
-                    df_ger.sort_values(by='Crecimiento_Ventas', ascending=False),
-                    x='Gerente', y='Crecimiento_Ventas', text_auto='.2s',
-                    color='Crecimiento_Ventas', color_continuous_scale='Blugrn',
-                    title="Crecimiento de Ventas ($) vs Fecha Anterior por Gerencia"
-                )
-                st.plotly_chart(fig, use_container_width=True)
-
-            # Matriz Gerencial
-            st.markdown("#### 📋 Consolidado de Indicadores por Gerencia")
-            st.dataframe(
-                df_ger.style.format({
-                    'Ventas_Actuales': '${:,.0f}',
-                    'Presupuesto_Actual': '${:,.0f}',
-                    'GAP_Presupuesto': '${:,.0f}',
-                    'Cumplimiento_%': '{:.1f}%',
-                    'Ventas_Anteriores': '${:,.0f}',
-                    'Crecimiento_Ventas': '${:,.0f}',
-                    'Crecimiento_%': '{:.1f}%',
-                    'Transacciones': '{:,.0f}'
-                }),
-                use_container_width=True
-            )
+        st.markdown("<br>", unsafe_allow_html=True)
 
         # -------------------------------------------------------------
-        # PESTAÑA 2: ANÁLISIS DETALLADO POR TIENDA
+        # FILA 2: GRÁFICO CENTRAL + SEMÁFORO DE FILTRO
         # -------------------------------------------------------------
-        with tab2:
-            st.subheader("🏬 Detalle por Tiendas & Identificación de Brechas")
-            
-            # Filtros dinámicos superiores
-            f1, f2, f3 = st.columns(3)
-            with f1:
-                filtro_ger_t = st.selectbox("Filtrar por Gerente:", ["Todos"] + sorted(list(df_merged['Gerente'].dropna().unique())))
-            with f2:
-                filtro_sup_t = st.selectbox("Filtrar por Supervisor:", ["Todos"] + sorted(list(df_merged['Supervisor'].dropna().unique())))
-            with f3:
-                filtro_pareto = st.selectbox("Filtrar por Pareto:", ["Todos"] + sorted(list(df_merged['Pareto'].dropna().unique())))
+        c_graf, c_sem = st.columns([3, 1])
 
-            # Aplicar filtros
-            df_t_view = df_merged.copy()
-            if filtro_ger_t != "Todos":
-                df_t_view = df_t_view[df_t_view['Gerente'] == filtro_ger_t]
-            if filtro_sup_t != "Todos":
-                df_t_view = df_t_view[df_t_view['Supervisor'] == filtro_sup_t]
-            if filtro_pareto != "Todos":
-                df_t_view = df_t_view[df_t_view['Pareto'] == filtro_pareto]
+        df_f['Diff_Ventas_$'] = df_f['Ventas_Real_Act'] - df_f['Ventas_Real_Ant']
+        df_f['Diff_Pct'] = ((df_f['Ventas_Real_Act'] - df_f['Ventas_Real_Ant']) / df_f['Ventas_Real_Ant'].replace(0, 1)) * 100
+        df_f['Tipo_Crecimiento'] = df_f['Diff_Ventas_$'].apply(lambda x: 'CRECIMIENTO ($)' if x >= 0 else 'DECRECIMIENTO ($)')
 
-            st.markdown("---")
-
-            # Botones de Crecimiento vs Decrecimiento %
-            st.markdown("##### 🔘 Estado de Crecimiento de Tiendas:")
-            filtro_estado = st.radio(
+        with c_sem:
+            st.markdown("#### SEMÁFORO DE TIENDA")
+            filtro_semaforo = st.radio(
                 "",
-                ["Todas las Tiendas", "Tiendas que DECRECEN % (Atención 🔴)", "Tiendas que CRECEN % (🟢)"],
-                horizontal=True
+                ["Crecimiento", "Decrecimiento", "Todas"],
+                index=2
             )
             
-            if "DECRECEN" in filtro_estado:
-                df_t_view = df_t_view[df_t_view['Var_Ventas_%'] < 0]
-            elif "CRECEN" in filtro_estado:
-                df_t_view = df_t_view[df_t_view['Var_Ventas_%'] >= 0]
+            df_graf = df_f.copy()
+            if filtro_semaforo == "Crecimiento":
+                df_graf = df_graf[df_graf['Diff_Ventas_$'] >= 0]
+            elif filtro_semaforo == "Decrecimiento":
+                df_graf = df_graf[df_graf['Diff_Ventas_$'] < 0]
 
-            # Gráfico GAP de Crecimiento %
-            fig_t = px.bar(
-                df_t_view.sort_values(by='Var_Ventas_%'),
-                y='Tienda', x='Var_Ventas_%',
-                color='Var_Ventas_%', color_continuous_scale='RdYlGn',
-                orientation='h', text_auto='.1f',
-                title="Variación Porcentual de Ventas (%) entre Fechas Medidas"
+        with c_graf:
+            fig_bar = px.bar(
+                df_graf.sort_values(by='Diff_Ventas_$'),
+                y='Tienda', x='Diff_Ventas_$',
+                color='Tipo_Crecimiento',
+                color_discrete_map={'CRECIMIENTO ($)': '#16A34A', 'DECRECIMIENTO ($)': '#DC2626'},
+                orientation='h',
+                title="CRECIMIENTO/DECRECIMIENTO DE VENTAS POR TIENDA (VS SEMANA ANTERIOR)"
             )
-            fig_t.update_layout(height=max(400, len(df_t_view) * 22))
-            st.plotly_chart(fig_t, use_container_width=True)
+            fig_bar.update_layout(height=max(350, len(df_graf) * 25))
+            st.plotly_chart(fig_bar, use_container_width=True)
 
         # -------------------------------------------------------------
-        # PESTAÑA 3: TRANSACCIONES Y TICKET PROMEDIO
+        # FILA 3: TABLA DETALLE DE TIENDAS CON COLORES DE ESTADO
         # -------------------------------------------------------------
-        with tab3:
-            st.subheader("🎟️ Comportamiento de Tráfico y Ticket Promedio")
-            
-            col_a, col_b = st.columns(2)
-            with col_a:
-                st.markdown("#### Variación de Transacciones (#)")
-                fig_tr = px.bar(
-                    df_merged.sort_values(by='Var_Trans', ascending=False).head(15),
-                    x='Tienda', y='Var_Trans', color='Var_Trans', color_continuous_scale='Viridis',
-                    title="Top 15 Tiendas con Mayor Cambio en Clientes Atendidos"
-                )
-                st.plotly_chart(fig_tr, use_container_width=True)
-                
-            with col_b:
-                st.markdown("#### Ticket Promedio ($)")
-                fig_tk = px.scatter(
-                    df_merged,
-                    x='Ticket_Real_$_Ant', y='Ticket_Real_$_Act',
-                    size='Ventas_Real_$_Act', color='Gerente', hover_name='Tienda',
-                    title="Comparativa Ticket Promedio (Eje X: Ant. vs Eje Y: Act.)"
-                )
-                st.plotly_chart(fig_tk, use_container_width=True)
+        st.markdown("### DETALLE DE TIENDAS Y ESTADO DE COMPARACIÓN")
 
-        # -------------------------------------------------------------
-        # PESTAÑA 4: MATRIZ COMPLETA DE DATOS
-        # -------------------------------------------------------------
-        with tab4:
-            st.subheader("📋 Matriz Completa de Datos y Filtros Libres")
-            st.dataframe(
-                df_merged[[
-                    'Tienda', 'Gerente', 'Supervisor', 'Segmento', 'Pareto',
-                    'Ventas_Real_$_Act', 'Ppto_Real_$_Act', 'GAP_Ppto_$', 'Cumplimiento_%',
-                    'Ventas_Real_$_Ant', 'Var_Ventas_$', 'Var_Ventas_%',
-                    'Transacciones_Real_Act', 'Ticket_Real_$_Act'
-                ]].style.format({
-                    'Ventas_Real_$_Act': '${:,.0f}',
-                    'Ppto_Real_$_Act': '${:,.0f}',
-                    'GAP_Ppto_$': '${:,.0f}',
-                    'Cumplimiento_%': '{:.1f}%',
-                    'Ventas_Real_$_Ant': '${:,.0f}',
-                    'Var_Ventas_$': '${:,.0f}',
-                    'Var_Ventas_%': '{:.1f}%',
-                    'Transacciones_Real_Act': '{:,.0f}',
-                    'Ticket_Real_$_Act': '${:,.0f}'
-                }),
-                use_container_width=True
-            )
+        def evaluar_estado(row):
+            cumple = row['Ventas_Real_Act'] >= row['Ppto_Real_Act']
+            crece = row['Diff_Ventas_$'] >= 0
+            if cumple and crece:
+                return "Cumple Ppto y crece 🟢"
+            elif cumple and not crece:
+                return "Cumple Ppto pero decrece 🟡"
+            elif not cumple and crece:
+                return "No cumple Ppto pero crece 🟧"
+            else:
+                return "No cumple Ppto y decrece 🔴"
+
+        df_f['Estado Comparación'] = df_f.apply(evaluar_estado, axis=1)
+        df_f['Vs Ppto $'] = df_f['Ventas_Real_Act'] - df_f['Ppto_Real_Act']
+
+        tabla_mostrar = df_f[[
+            'Tienda', 'Gerente', 'Ventas_Real_Act', 'Diff_Pct', 'Vs Ppto $', 'Estado Comparación'
+        ]].copy()
+
+        tabla_mostrar.columns = ['Tienda', 'Gerente', 'Ventas Act', '% Var Vs Sem Ant', 'Vs Ppto $', 'Estado Comparación']
+
+        st.dataframe(
+            tabla_mostrar.style.format({
+                'Ventas Act': '${:,.0f}',
+                '% Var Vs Sem Ant': '{:+.1f}%',
+                'Vs Ppto $': '${:,.0f}'
+            }),
+            use_container_width=True
+        )
 
 else:
-    st.info("👈 Por favor, sube el archivo ANALISIS GAP.xlsx en el menú de la izquierda para comenzar.")
+    st.info("👈 Por favor sube el archivo ANALISIS GAP.xlsx en el menú lateral.")
