@@ -1,186 +1,266 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 
-st.set_page_config(page_title="Análisis GAP de Ventas", layout="wide")
+# Configuración de la aplicación
+st.set_page_config(
+    page_title="Tablero de Control - Análisis GAP", 
+    layout="wide", 
+    initial_sidebar_state="expanded"
+)
 
-st.title("📊 Tablero de Análisis GAP y Desempeño Multiciclo")
+st.title("📊 Tablero de Control y Análisis GAP de Ventas")
 
-# 1. CARGA DE BASE DE DATOS Y HOJAS TEMPORALES
+# 1. FUNCIÓN DE CARGA Y LIMPIEZA
 @st.cache_data
-def cargar_archivo_master(uploaded_file):
+def cargar_datos_completos(uploaded_file):
     xls = pd.ExcelFile(uploaded_file)
     
-    # Cargar Maestro de Tiendas
+    # Cargar Maestro BASE DE DATOS
+    df_base = pd.DataFrame()
     if 'BASE DE DATOS' in xls.sheet_names:
         df_base = pd.read_excel(xls, sheet_name='BASE DE DATOS')
-        df_base = df_base.rename(columns={'Tienda': 'Tienda_Base'})
-    else:
-        df_base = pd.DataFrame()
-        
-    # Cargar Hojas de Fechas/Ciclos (Omitir BASE DE DATOS)
-    hojas_fechas = [s for s in xls.sheet_names if s != 'BASE DE DATOS']
-    datos_fechas = []
+        df_base = df_base.rename(columns={'Tienda': 'Tienda_Maestro'})
     
-    for hoja in hojas_fechas:
+    # Cargar pestañas de fechas/ciclos
+    hojas_ciclos = [s for s in xls.sheet_names if s != 'BASE DE DATOS']
+    lista_dfs = []
+    
+    for hoja in hojas_ciclos:
         df = pd.read_excel(xls, sheet_name=hoja)
         
-        # Asignar Gerente/Supervisor por Forward Fill
-        df['Gerente_Supervisor'] = df['Desglose (1)'].ffill()
-        df.rename(columns={'Desglose (2)': 'Tienda'}, inplace=True)
+        # Propagar supervisor/gerente si vienen en celdas combinadas
+        if 'Desglose (1)' in df.columns:
+            df['Gerente_Supervisor_Raw'] = df['Desglose (1)'].ffill()
+        if 'Desglose (2)' in df.columns:
+            df.rename(columns={'Desglose (2)': 'Tienda'}, inplace=True)
+            
+        # Filtrar filas de totales o vacías
+        df = df[df['Tienda'].notna()]
+        df = df[~df['Tienda'].astype(str).str.contains('Total|general', case=False, na=False)]
+        df['Ciclo'] = str(hoja)
         
-        # Limpieza
-        df = df[~df['Gerente_Supervisor'].str.contains('Total', na=False)]
-        df = df.dropna(subset=['Tienda'])
-        df['Ciclo_Fecha'] = hoja
-        
-        # Limpieza de valores numéricos por si vienen formateados como texto
-        cols_num = ['Ventas Act', 'Ppto', 'Transacciones Act', 'Ticket promedio Act']
-        for col in cols_num:
+        # Limpieza de columnas numéricas
+        cols_numericas = ['Ventas Act', 'Ppto', 'Transacciones Act', 'Ticket promedio Act']
+        for col in cols_numericas:
             if col in df.columns:
                 df[col] = pd.to_numeric(
-                    df[col].astype(str).str.replace('$', '').str.replace('M', '').str.replace(',', ''), 
+                    df[col].astype(str).str.replace('$', '', regex=False)
+                           .str.replace('M', '', regex=False)
+                           .str.replace(',', '', regex=False),
                     errors='coerce'
                 ).fillna(0)
                 
-        datos_fechas.append(df)
+        lista_dfs.append(df)
         
-    if datos_fechas:
-        df_historico = pd.concat(datos_fechas, ignore_index=True)
-        # Cruzar con Maestro de Tiendas si existe
+    if lista_dfs:
+        df_historico = pd.concat(lista_dfs, ignore_index=True)
         if not df_base.empty:
             df_historico = pd.merge(
                 df_historico, 
                 df_base, 
                 left_on='Tienda', 
-                right_on='Tienda_Base', 
+                right_on='Tienda_Maestro', 
                 how='left'
             )
-        return df_historico, hojas_fechas
+        return df_historico, hojas_ciclos
     return pd.DataFrame(), []
 
-# Menú lateral para subir archivo
-st.sidebar.header("📁 Cargar Libro de Excel")
-file_upload = st.sidebar.file_uploader("Sube el archivo ANALISIS GAP.xlsx", type=['xlsx'])
+# Cargar archivo desde el Sidebar
+st.sidebar.header("📁 Carga de Información")
+archivo_excel = st.sidebar.file_uploader("Sube el archivo ANALISIS GAP.xlsx", type=['xlsx'])
 
-if file_upload:
-    df_tot, lista_ciclos = cargar_archivo_master(file_upload)
+if archivo_excel:
+    df_tot, ciclos = cargar_datos_completos(archivo_excel)
     
-    if len(lista_ciclos) < 2:
-        st.warning("⚠️ El archivo necesita al menos 2 hojas de fechas/ciclos para calcular comparaciones GAP.")
+    if len(ciclos) < 2:
+        st.warning("⚠️ Se requieren al menos 2 pestañas de fechas/ciclos para comparar el análisis GAP.")
     else:
-        # 2. FILTROS DINÁMICOS
-        st.sidebar.header("⚙️ Configuración y Filtros")
+        # Selección de Ciclos a comparar
+        st.sidebar.header("⚙️ Configuración de Comparación")
+        ciclo_act = st.sidebar.selectbox("Ciclo Evaluado (Actual):", ciclos, index=len(ciclos)-1)
+        ciclo_ant = st.sidebar.selectbox("Ciclo Comparativo (Anterior):", ciclos, index=max(0, len(ciclos)-2))
         
-        ciclo_actual = st.sidebar.selectbox("Seleccionar Ciclo / Fecha Actual:", lista_ciclos, index=len(lista_ciclos)-1)
-        ciclo_anterior = st.sidebar.selectbox("Seleccionar Ciclo / Fecha Comparativa:", lista_ciclos, index=max(0, len(lista_ciclos)-2))
+        # Separación y Cruce de Datasets por Fechas
+        df_act = df_tot[df_tot['Ciclo'] == ciclo_act].copy()
+        df_ant = df_tot[df_tot['Ciclo'] == ciclo_ant].copy()
         
-        # Filtros opcionales por Maestro
-        gerentes = ["Todos"] + sorted(list(df_tot['Gerente'].dropna().unique())) if 'Gerente' in df_tot.columns else ["Todos"]
-        supervisores = ["Todos"] + sorted(list(df_tot['Supervisor'].dropna().unique())) if 'Supervisor' in df_tot.columns else ["Todos"]
+        cols_merge = ['Tienda', 'Gerente', 'Supervisor', 'Ciudad', 'Segmento', 'Comparable ', 'Pareto']
+        cols_merge = [c for c in cols_merge if c in df_act.columns]
         
-        filtro_ger = st.sidebar.selectbox("Gerente:", gerentes)
-        filtro_sup = st.sidebar.selectbox("Supervisor:", supervisores)
-        
-        # Aplicar Filtros
-        df_f = df_tot.copy()
-        if filtro_ger != "Todos":
-            df_f = df_f[df_f['Gerente'] == filtro_ger]
-        if filtro_sup != "Todos":
-            df_f = df_f[df_f['Supervisor'] == filtro_sup]
-            
-        # Separar dataset por fechas
-        df_act = df_f[df_f['Ciclo_Fecha'] == ciclo_actual]
-        df_ant = df_f[df_f['Ciclo_Fecha'] == ciclo_anterior]
-        
-        # Cruce de fechas para métricas
         df_merged = pd.merge(
-            df_act[['Tienda', 'Gerente', 'Supervisor', 'Segmento', 'Ventas Act', 'Ppto', 'Transacciones Act', 'Ticket promedio Act']],
+            df_act[cols_merge + ['Ventas Act', 'Ppto', 'Transacciones Act', 'Ticket promedio Act']],
             df_ant[['Tienda', 'Ventas Act', 'Ppto', 'Transacciones Act', 'Ticket promedio Act']],
             on='Tienda',
             suffixes=('_Act', '_Ant'),
             how='inner'
         )
         
-        # Cálculos de GAP de Presupuesto y Variación de Fechas
-        df_merged['GAP_Ppto_Act'] = df_merged['Ventas Act_Act'] - df_merged['Ppto_Act']
+        # Cálculos del GAP y Variaciones
+        df_merged['GAP_Ppto_$'] = df_merged['Ventas Act_Act'] - df_merged['Ppto_Act']
         df_merged['Cumplimiento_%'] = (df_merged['Ventas Act_Act'] / df_merged['Ppto_Act'].replace(0, 1)) * 100
-        
         df_merged['Var_Ventas_$'] = df_merged['Ventas Act_Act'] - df_merged['Ventas Act_Ant']
+        df_merged['Var_Ventas_%'] = (df_merged['Var_Ventas_$'] / df_merged['Ventas Act_Ant'].replace(0, 1)) * 100
         df_merged['Var_Trans'] = df_merged['Transacciones Act_Act'] - df_merged['Transacciones Act_Ant']
         df_merged['Var_Ticket'] = df_merged['Ticket promedio Act_Act'] - df_merged['Ticket promedio Act_Ant']
 
-        # 3. TARJETAS MÉTIRCAS RESUMEN
-        st.subheader(f"🎯 Indicadores GAP Globales ({ciclo_actual} vs {ciclo_anterior})")
-        m1, m2, m3, m4 = st.columns(4)
-        
-        total_ventas = df_merged['Ventas Act_Act'].sum()
-        total_ppto = df_merged['Ppto_Act'].sum()
-        gap_total_ppto = total_ventas - total_ppto
-        
-        m1.metric("Ventas Totales", f"${total_ventas:,.0f}")
-        m2.metric("Presupuesto Total", f"${total_ppto:,.0f}")
-        m3.metric("GAP vs Presupuesto", f"${gap_total_ppto:,.0f}", delta_color="normal")
-        m4.metric("Variación Ventas vs Fecha Ant.", f"${df_merged['Var_Ventas_$'].sum():,.0f}")
+        # --- NAVEGACIÓN PRINCIPAL CON PESTAÑAS ---
+        tab1, tab2, tab3, tab4 = st.tabs([
+            "🏢 Resumen Gerencial", 
+            "🏬 Detalle Tienda a Tienda", 
+            "🎟️ Transacciones & Ticket", 
+            "📋 Matriz & Maestro"
+        ])
 
-        st.markdown("---")
-
-        # 4. GRÁFICOS DE ANÁLISIS
-        tab1, tab2, tab3 = st.tabs(["📉 GAP Presupuesto", "🔄 Variación de Ciclo", "🎟️ Transacciones y Ticket"])
-        
+        # -------------------------------------------------------------
+        # PESTAÑA 1: RESUMEN GERENCIAL
+        # -------------------------------------------------------------
         with tab1:
-            st.subheader("Brecha vs Presupuesto por Tienda (GAP Ppto)")
-            fig_gap = px.bar(
-                df_merged.sort_values(by='GAP_Ppto_Act'),
-                y='Tienda',
-                x='GAP_Ppto_Act',
-                color='GAP_Ppto_Act',
-                color_continuous_scale='RdYlGn',
-                orientation='h',
-                title="Diferencia Monetaria vs Presupuesto ($)"
+            st.subheader(f"📊 Desempeño Consolidado por Gerencias ({ciclo_act})")
+            
+            # Selector de Agrupación con Botones
+            agrupador = st.radio(
+                "Ver Consolidado por:", 
+                ["Gerente", "Supervisor", "Segmento", "Ciudad"], 
+                horizontal=True
             )
-            st.plotly_chart(fig_gap, use_container_width=True)
+            
+            if agrupador in df_merged.columns:
+                df_gerencial = df_merged.groupby(agrupador).agg(
+                    Ventas_Actuales=('Ventas Act_Act', 'sum'),
+                    Presupuesto=('Ppto_Act', 'sum'),
+                    GAP_Ppto=('GAP_Ppto_$', 'sum'),
+                    Ventas_Anteriores=('Ventas Act_Ant', 'sum'),
+                    Var_Ventas=('Var_Ventas_$', 'sum'),
+                    Transacciones=('Transacciones Act_Act', 'sum')
+                ).reset_index()
+                
+                df_gerencial['Cumplimiento_%'] = (df_gerencial['Ventas_Actuales'] / df_gerencial['Presupuesto'].replace(0, 1)) * 100
+                df_gerencial['Var_Ventas_%'] = (df_gerencial['Var_Ventas'] / df_gerencial['Ventas_Anteriores'].replace(0, 1)) * 100
+                
+                # Tarjetas Macro
+                c1, c2, c3, c4 = st.columns(4)
+                c1.metric("Ventas Totales", f"${df_gerencial['Ventas_Actuales'].sum():,.0f}")
+                c2.metric("Presupuesto Total", f"${df_gerencial['Presupuesto'].sum():,.0f}")
+                c3.metric("GAP vs Presupuesto", f"${df_gerencial['GAP_Ppto'].sum():,.0f}")
+                c4.metric("Crecimiento vs Ciclo Anterior", f"${df_gerencial['Var_Ventas'].sum():,.0f}")
 
+                st.markdown("---")
+
+                # Gráfico Visual de Cumplimiento por Gerencia/Grupo
+                fig_ger = px.bar(
+                    df_gerencial.sort_values(by='Cumplimiento_%', ascending=False),
+                    x=agrupador,
+                    y='Cumplimiento_%',
+                    color='Cumplimiento_%',
+                    color_continuous_scale='Greens',
+                    text_auto='.1f',
+                    title=f"% Cumplimiento de Presupuesto por {agrupador}"
+                )
+                fig_ger.add_hline(y=100, line_dash="dash", line_color="red", annotation_text="Meta 100%")
+                st.plotly_chart(fig_ger, use_container_width=True)
+
+                # Tabla Resumen Gerencial
+                st.dataframe(
+                    df_gerencial.style.format({
+                        'Ventas_Actuales': '${:,.0f}',
+                        'Presupuesto': '${:,.0f}',
+                        'GAP_Ppto': '${:,.0f}',
+                        'Ventas_Anteriores': '${:,.0f}',
+                        'Var_Ventas': '${:,.0f}',
+                        'Cumplimiento_%': '{:.1f}%',
+                        'Var_Ventas_%': '{:.1f}%'
+                    }),
+                    use_container_width=True
+                )
+
+        # -------------------------------------------------------------
+        # PESTAÑA 2: DETALLE TIENDA A TIENDA (ANÁLISIS GAP)
+        # -------------------------------------------------------------
         with tab2:
-            st.subheader("Crecimiento/Decrecimiento de Ventas vs Ciclo Anterior")
-            fig_var = px.bar(
-                df_merged.sort_values(by='Var_Ventas_$'),
+            st.subheader("🎯 Identificación de Brechas (Tiendas que Crece vs Decrecen)")
+            
+            # Botones de Filtro de Crecimiento/Decrecimiento
+            filtro_vista = st.radio(
+                "Filtrar tiendas por:", 
+                ["Todas las Tiendas", "Sólo Tiendas que Decrecen (Críticas 🔴)", "Sólo Tiendas que Crecen (🟢)"],
+                horizontal=True
+            )
+            
+            df_tiendas_view = df_merged.copy()
+            if "Decrecen" in filtro_vista:
+                df_tiendas_view = df_tiendas_view[df_tiendas_view['Var_Ventas_$'] < 0]
+            elif "Crecen" in filtro_vista:
+                df_tiendas_view = df_tiendas_view[df_tiendas_view['Var_Ventas_$'] >= 0]
+                
+            # Gráfico Divergente GAP
+            fig_gap = px.bar(
+                df_tiendas_view.sort_values(by='Var_Ventas_$'),
                 y='Tienda',
                 x='Var_Ventas_$',
                 color='Var_Ventas_$',
-                color_continuous_scale='Blugrn',
+                color_continuous_scale='RdYlGn',
                 orientation='h',
-                title="Variación de Ventas entre Fechas ($)"
+                title="Diferencia de Ventas ($) entre Ciclos Evaluados",
+                text_auto='.2s'
             )
-            st.plotly_chart(fig_var, use_container_width=True)
+            fig_gap.update_layout(height=max(400, len(df_tiendas_view) * 20))
+            st.plotly_chart(fig_gap, use_container_width=True)
 
+        # -------------------------------------------------------------
+        # PESTAÑA 3: TRANSACCIONES Y TICKET PROMEDIO
+        # -------------------------------------------------------------
         with tab3:
-            st.subheader("Análisis de Transacciones y Ticket Promedio")
-            col_a, col_b = st.columns(2)
-            with col_a:
-                fig_trans = px.bar(df_merged, x='Tienda', y='Var_Trans', title="Variación en Transacciones (#)")
-                st.plotly_chart(fig_trans, use_container_width=True)
-            with col_b:
-                fig_tick = px.line(df_merged, x='Tienda', y=['Ticket promedio Act_Act', 'Ticket promedio Act_Ant'], title="Comparativa Ticket Promedio ($)")
-                st.plotly_chart(fig_tick, use_container_width=True)
+            st.subheader("🎟️ Comportamiento de Tráfico (Transacciones) y Ticket Promedio")
+            
+            metric_view = st.radio(
+                "Métrica a Visualizar:", 
+                ["Variación en Transacciones (#)", "Variación en Ticket Promedio ($)"],
+                horizontal=True
+            )
+            
+            if "Transacciones" in metric_view:
+                fig_t = px.bar(
+                    df_merged.sort_values(by='Var_Trans'),
+                    x='Tienda',
+                    y='Var_Trans',
+                    color='Var_Trans',
+                    color_continuous_scale='Viridis',
+                    title="Variación de Clientes/Transacciones Atendidas (#)"
+                )
+                st.plotly_chart(fig_t, use_container_width=True)
+            else:
+                fig_tk = px.scatter(
+                    df_merged,
+                    x='Ticket promedio Act_Ant',
+                    y='Ticket promedio Act_Act',
+                    size='Ventas Act_Act',
+                    color='Gerente' if 'Gerente' in df_merged.columns else None,
+                    hover_name='Tienda',
+                    title="Comparación Ticket Promedio (Eje X: Anterior vs Eje Y: Actual)"
+                )
+                st.plotly_chart(fig_tk, use_container_width=True)
 
-        # 5. TABLA DE DETALLE COMPLETA
-        st.subheader("📋 Matriz Detallada de GAP y Métricas")
-        st.dataframe(
-            df_merged[[
-                'Tienda', 'Gerente', 'Supervisor', 'Ventas Act_Act', 
-                'Ppto_Act', 'GAP_Ppto_Act', 'Cumplimiento_%', 'Var_Ventas_$', 'Var_Trans', 'Var_Ticket'
-            ]].style.format({
-                'Ventas Act_Act': '${:,.0f}',
-                'Ppto_Act': '${:,.0f}',
-                'GAP_Ppto_Act': '${:,.0f}',
-                'Cumplimiento_%': '{:.1f}%',
-                'Var_Ventas_$': '${:,.0f}',
-                'Var_Trans': '{:,.0f}',
-                'Var_Ticket': '${:,.0f}'
-            }),
-            use_container_width=True
-        )
+        # -------------------------------------------------------------
+        # PESTAÑA 4: MATRIZ Y MAESTRO DE DATOS COMPLETO
+        # -------------------------------------------------------------
+        with tab4:
+            st.subheader("📋 Matriz Consolidada de Resultados")
+            st.dataframe(
+                df_merged.style.format({
+                    'Ventas Act_Act': '${:,.0f}',
+                    'Ppto_Act': '${:,.0f}',
+                    'GAP_Ppto_$': '${:,.0f}',
+                    'Cumplimiento_%': '{:.1f}%',
+                    'Ventas Act_Ant': '${:,.0f}',
+                    'Var_Ventas_$': '${:,.0f}',
+                    'Var_Ventas_%': '{:.1f}%',
+                    'Transacciones Act_Act': '{:,.0f}',
+                    'Ticket promedio Act_Act': '${:,.0f}'
+                }),
+                use_container_width=True
+            )
 
 else:
-    st.info("👈 Por favor, carga tu archivo Excel (ANALISIS GAP.xlsx) en la barra lateral para generar el tablero.")
+    st.info("👈 Por favor, sube el archivo Excel (ANALISIS GAP.xlsx) en el menú lateral para activar la visualización.")
