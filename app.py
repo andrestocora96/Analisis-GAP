@@ -598,15 +598,22 @@ if file_to_process:
         with tab2:
             st.markdown("### 🎯 FILTROS DE ANÁLISIS DETALLADO")
             
-            # 4 COLUMNAS DE FILTROS: GERENTE, SUPERVISOR, TIENDA Y REINICIO
-            f1, f2, f3, f4 = st.columns([2, 2, 2, 1])
-            
+            # Inicialización previa de variables de estado de sesión
             if "tab2_ger" not in st.session_state:
                 st.session_state["tab2_ger"] = "Todos"
             if "tab2_sup" not in st.session_state:
                 st.session_state["tab2_sup"] = "Todos"
             if "tab2_tienda" not in st.session_state:
                 st.session_state["tab2_tienda"] = "Todas"
+
+            # Función de callback para reiniciar los filtros de forma segura en Streamlit
+            def reset_filtros_tab2():
+                st.session_state["tab2_ger"] = "Todos"
+                st.session_state["tab2_sup"] = "Todos"
+                st.session_state["tab2_tienda"] = "Todas"
+
+            # 4 COLUMNAS DE FILTROS: GERENTE, SUPERVISOR, TIENDA Y REINICIO
+            f1, f2, f3, f4 = st.columns([2, 2, 2, 1])
 
             with f1:
                 gerentes_sel = ["Todos"] + sorted([g for g in df_base['Gerente'].dropna().unique() if str(g) != 'nan'])
@@ -621,11 +628,7 @@ if file_to_process:
                 s_tienda = st.selectbox("Seleccionar Tienda:", tiendas_sel, key="tab2_tienda")
             with f4:
                 st.markdown("<br>", unsafe_allow_html=True)
-                if st.button("🔄 Reiniciar Filtros", use_container_width=True):
-                    st.session_state["tab2_ger"] = "Todos"
-                    st.session_state["tab2_sup"] = "Todos"
-                    st.session_state["tab2_tienda"] = "Todas"
-                    st.rerun()
+                st.button("🔄 Reiniciar Filtros", use_container_width=True, on_click=reset_filtros_tab2)
 
             df_tab2 = df_base.copy()
             if s_ger != "Todos": df_tab2 = df_tab2[df_tab2['Gerente'] == s_ger]
