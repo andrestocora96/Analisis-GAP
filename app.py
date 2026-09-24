@@ -448,6 +448,7 @@ if file_to_process:
         if solo_pareto: df_base = df_base[df_base['Pareto'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
         if solo_comparable: df_base = df_base[df_base['Comparable_Val'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
 
+        # DIAGNÓSTICO GERENCIAL INTEGRANDO ANÁLISIS PARETO
         def generar_diagnostico_gerencial(df_data):
             v_act = df_data['Ventas_Real_Act'].sum()
             ppto_act = df_data['Ppto_Real_Act'].sum()
@@ -537,6 +538,7 @@ if file_to_process:
 
             return "<br><br>".join(analisis)
 
+        # RENDERIZADO DE KPIS CON FLECHAS EN EL VALOR PRINCIPAL
         def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
@@ -562,12 +564,11 @@ if file_to_process:
             gap_ticket_monto = ticket_act - ticket_obj
             var_ticket_aa = ((ticket_act - ticket_aa) / ticket_aa * 100) if ticket_aa > 0 else 0.0
 
+            # SIMBOLO Y FLECHA EN EL VALOR PRINCIPAL EN PESOS DEL GAP
             if evol_gap_monto >= 0:
-                flecha_gap = "🟢 ▲"
-                col_sub_gap = "#16A34A"
+                flecha_monto = " ▲"
             else:
-                flecha_gap = "🔴 ▼"
-                col_sub_gap = "#DC2626"
+                flecha_monto = " ▼"
 
             k1, k2, k3, k4, k5, k6 = st.columns([1, 1, 1, 1, 1.2, 1])
             with k1:
@@ -583,8 +584,8 @@ if file_to_process:
                 st.markdown(f"""
                 <div class="metric-card {'card-green' if gap_act>=0 else 'card-red'}">
                     <div class="card-title">GAP PPTO ACTUAL</div>
-                    <div class="card-value" style="color:{col_g};">${gap_act:,.0f}</div>
-                    <div class="card-sub" style="color:{col_sub_gap}; font-weight:bold;">GAP Ant: ${gap_ant:,.0f} ({flecha_gap})</div>
+                    <div class="card-value" style="color:{col_g};">${gap_act:,.0f}{flecha_monto}</div>
+                    <div class="card-sub">GAP Ant: ${gap_ant:,.0f}</div>
                 </div>
                 """, unsafe_allow_html=True)
             with k3:
