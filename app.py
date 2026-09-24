@@ -9,7 +9,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 🎨 PALETA DE COLORES CORPORATIVA Y ESTILOS CSS PREMIUM JUAN VALDEZ
+# 🎨 PALETA DE COLORES CORPORATIVA Y ESTILOS CSS PREMIUM JUAN VALDEZ CON SWITCH ROSA
 st.markdown("""
 <style>
     /* Estilo General */
@@ -24,7 +24,7 @@ st.markdown("""
         border-radius: 12px;
         color: white;
         text-align: center;
-        margin-bottom: 25px;
+        margin-bottom: 20px;
         box-shadow: 0 4px 12px rgba(122, 0, 22, 0.25);
     }
     .jv-header h1 {
@@ -39,6 +39,30 @@ st.markdown("""
         font-size: 13px;
         color: #F1F5F9;
         opacity: 0.9;
+    }
+
+    /* Caja del Filtro Switch Rosa Claro */
+    .pareto-container {
+        background-color: #FDF2F8;
+        border: 2px solid #F472B6;
+        border-radius: 12px;
+        padding: 12px 20px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 2px 8px rgba(244, 114, 182, 0.15);
+    }
+    .pareto-title {
+        font-weight: 800;
+        font-size: 14px;
+        color: #9D174D;
+        margin: 0;
+    }
+
+    /* Personalización del Toggle de Streamlit a Rosa */
+    div[data-testid="stCheckbox"] > label > div[role="checkbox"][aria-checked="true"] {
+        background-color: #EC4899 !important;
     }
 
     /* Tarjetas de KPI Principales */
@@ -76,7 +100,7 @@ st.markdown("""
         font-weight: 500;
     }
 
-    /* Tarjetas de Gerentes (Parte Inferior Pestaña 1) */
+    /* Tarjetas de Gerentes */
     .gerente-box {
         background-color: #FFFFFF;
         border-radius: 12px;
@@ -186,9 +210,15 @@ if uploaded_file:
         df_act = df_tot[df_tot['Ciclo'] == c_act].copy()
         df_ant = df_tot[df_tot['Ciclo'] == c_ant].copy()
         
+        cols_act = ['Tienda_Clean', 'Tienda', 'Gerente', 'Supervisor', 'Ciudad', 'Segmento', 'Ventas_Real', 'Ppto_Real']
+        if 'Pareto' in df_act.columns: cols_act.append('Pareto')
+        
+        cols_ant = ['Tienda_Clean', 'Tienda', 'Gerente', 'Supervisor', 'Ventas_Real', 'Ppto_Real']
+        if 'Pareto' in df_ant.columns: cols_ant.append('Pareto')
+
         df_merged = pd.merge(
-            df_act[['Tienda_Clean', 'Tienda', 'Gerente', 'Supervisor', 'Ciudad', 'Segmento', 'Ventas_Real', 'Ppto_Real']],
-            df_ant[['Tienda_Clean', 'Tienda', 'Gerente', 'Supervisor', 'Ventas_Real', 'Ppto_Real']],
+            df_act[cols_act],
+            df_ant[cols_ant],
             on='Tienda_Clean',
             suffixes=('_Act', '_Ant'),
             how='outer'
@@ -198,6 +228,13 @@ if uploaded_file:
         df_merged['Gerente'] = df_merged['Gerente_Act'].combine_first(df_merged['Gerente_Ant'])
         df_merged['Supervisor'] = df_merged['Supervisor_Act'].combine_first(df_merged['Supervisor_Ant'])
         
+        if 'Pareto_Act' in df_merged.columns and 'Pareto_Ant' in df_merged.columns:
+            df_merged['Pareto'] = df_merged['Pareto_Act'].combine_first(df_merged['Pareto_Ant'])
+        elif 'Pareto_Act' in df_merged.columns:
+            df_merged['Pareto'] = df_merged['Pareto_Act']
+        elif 'Pareto' not in df_merged.columns:
+            df_merged['Pareto'] = 'NO'
+            
         for col in ['Ventas_Real_Act', 'Ppto_Real_Act', 'Ventas_Real_Ant', 'Ppto_Real_Ant']:
             df_merged[col] = df_merged[col].fillna(0.0)
             
@@ -229,7 +266,24 @@ if uploaded_file:
 
         df_merged['Escenario'] = df_merged.apply(clasificar_escenario, axis=1)
 
-        # RENDERIZADO DE MÉTRO DE TARJETAS SUPERIORES (CON KEY ÚNICA)
+        # ----------------------------------------------------------------------
+        # BARRA DE FILTRO DINÁMICO ESTILO SWITCH ROSA PARA TIENDAS PARETO
+        # ----------------------------------------------------------------------
+        col_pareto, col_blank = st.columns([1, 2])
+        with col_pareto:
+            st.markdown('<div class="pareto-container"><span class="pareto-title">🌸 FILTRAR TIENDAS PARETO</span>', unsafe_allow_html=True)
+            solo_pareto = st.toggle("Activar Filtro Pareto", value=False, key="switch_pareto")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        if solo_pareto:
+            # Filtrar por valores que indiquen Pareto en la Base de Datos
+            patron_pareto = 'SI|S|1|PARETO|TRUE'
+            df_base = df_merged[df_merged['Pareto'].astype(str).str.upper().str.contains(patron_pareto, regex=True, na=False)].copy()
+            st.toast("🌸 Filtro Pareto Aplicado: Mostrando solo Tiendas Pareto", icon="✨")
+        else:
+            df_base = df_merged.copy()
+
+        # RENDERIZADO DE MÉRITO DE TARJETAS SUPERIORES (CON KEY ÚNICA)
         def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
@@ -313,15 +367,15 @@ if uploaded_file:
         # ==============================================================================
         with tab1:
             st.markdown("### 🏢 RESUMEN GENERAL DE LA COMPAÑÍA")
-            render_kpi_block(df_merged, key_suffix="global")
+            render_kpi_block(df_base, key_suffix="global")
             
             st.markdown("---")
             st.markdown("### 👔 DETALLE CONSOLIDADO POR GERENTE REGIONAL")
             
-            lista_gerentes = sorted([g for g in df_merged['Gerente'].dropna().unique() if str(g) != 'nan'])
+            lista_gerentes = sorted([g for g in df_base['Gerente'].dropna().unique() if str(g) != 'nan'])
             
             for idx, ger in enumerate(lista_gerentes):
-                df_g = df_merged[df_merged['Gerente'] == ger]
+                df_g = df_base[df_base['Gerente'] == ger]
                 if df_g['Ventas_Real_Act'].sum() > 0 or df_g['Ppto_Real_Act'].sum() > 0:
                     with st.container():
                         st.markdown(f"""
@@ -341,14 +395,14 @@ if uploaded_file:
             
             f1, f2 = st.columns(2)
             with f1:
-                gerentes_sel = ["Todos"] + sorted([g for g in df_merged['Gerente'].dropna().unique() if str(g) != 'nan'])
+                gerentes_sel = ["Todos"] + sorted([g for g in df_base['Gerente'].dropna().unique() if str(g) != 'nan'])
                 s_ger = st.selectbox("Seleccionar Gerente:", gerentes_sel, key="tab2_ger")
             with f2:
-                df_temp = df_merged if s_ger == "Todos" else df_merged[df_merged['Gerente'] == s_ger]
+                df_temp = df_base if s_ger == "Todos" else df_base[df_base['Gerente'] == s_ger]
                 sups_sel = ["Todos"] + sorted([s for s in df_temp['Supervisor'].dropna().unique() if str(s) != 'nan'])
                 s_sup = st.selectbox("Seleccionar Supervisor:", sups_sel, key="tab2_sup")
 
-            df_tab2 = df_merged.copy()
+            df_tab2 = df_base.copy()
             if s_ger != "Todos": df_tab2 = df_tab2[df_tab2['Gerente'] == s_ger]
             if s_sup != "Todos": df_tab2 = df_tab2[df_tab2['Supervisor'] == s_sup]
 
