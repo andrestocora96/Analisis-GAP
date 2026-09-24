@@ -229,9 +229,8 @@ if uploaded_file:
 
         df_merged['Escenario'] = df_merged.apply(clasificar_escenario, axis=1)
 
-        # RENDERIZADO DE MÉTRO DE TARJETAS SUPERIORES
-        def render_kpi_block(df_scope, title_label="TOTAL COMPAÑÍA"):
-            # Filtrar solo tiendas activas que reportaron venta en la semana actual
+        # RENDERIZADO DE MÉTRO DE TARJETAS SUPERIORES (CON KEY ÚNICA)
+        def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
             v_act = df_scope['Ventas_Real_Act'].sum()
@@ -275,7 +274,7 @@ if uploaded_file:
                     }
                 ))
                 fig_g.update_layout(height=130, margin=dict(l=10, r=10, t=10, b=10))
-                st.plotly_chart(fig_g, use_container_width=True)
+                st.plotly_chart(fig_g, use_container_width=True, key=f"gauge_{key_suffix}")
             with k4:
                 col_e = "#16A34A" if evol_gap >= 0 else "#DC2626"
                 st.markdown(f"""
@@ -314,25 +313,23 @@ if uploaded_file:
         # ==============================================================================
         with tab1:
             st.markdown("### 🏢 RESUMEN GENERAL DE LA COMPAÑÍA")
-            render_kpi_block(df_merged, "COMPAÑÍA")
+            render_kpi_block(df_merged, key_suffix="global")
             
             st.markdown("---")
             st.markdown("### 👔 DETALLE CONSOLIDADO POR GERENTE REGIONAL")
             
-            # Gerentes con actividad real
-            lista_gerentes = sorted([g for g in df_merged['Gerente'].dropna().unique() if g != 'nan'])
+            lista_gerentes = sorted([g for g in df_merged['Gerente'].dropna().unique() if str(g) != 'nan'])
             
-            for ger in lista_gerentes:
+            for idx, ger in enumerate(lista_gerentes):
                 df_g = df_merged[df_merged['Gerente'] == ger]
-                # Solo renderizamos si la gerencia tiene tiendas activas en el periodo
                 if df_g['Ventas_Real_Act'].sum() > 0 or df_g['Ppto_Real_Act'].sum() > 0:
                     with st.container():
                         st.markdown(f"""
                         <div class="gerente-box">
-                            <div class="gerente-title">📍 GERENCIA REGIONAL: {ger.upper()}</div>
+                            <div class="gerente-title">📍 GERENCIA REGIONAL: {str(ger).upper()}</div>
                         """, unsafe_allow_html=True)
                         
-                        render_kpi_block(df_g, ger)
+                        render_kpi_block(df_g, key_suffix=f"ger_{idx}")
                         
                         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -357,7 +354,7 @@ if uploaded_file:
 
             st.markdown("---")
             st.markdown(f"### 📈 INDICADORES CLAVE DE GESTIÓN ({s_sup if s_sup != 'Todos' else (s_ger if s_ger != 'Todos' else 'GLOBAL')})")
-            render_kpi_block(df_tab2, "FILTRADO")
+            render_kpi_block(df_tab2, key_suffix="tab2_kpis")
 
             st.markdown("---")
             st.markdown("### 👔 CUMPLIMIENTO INTERACTIVO POR SUPERVISOR")
@@ -381,7 +378,7 @@ if uploaded_file:
                 text_auto='.1f%'
             )
             fig_sup.update_layout(height=max(350, len(df_sup_agg) * 32))
-            st.plotly_chart(fig_sup, use_container_width=True)
+            st.plotly_chart(fig_sup, use_container_width=True, key="fig_sup_chart")
 
             st.markdown("---")
             st.markdown("### 🏬 EVOLUCIÓN DEL GAP POR TIENDA (BARRAS HORIZONTALES)")
@@ -402,7 +399,7 @@ if uploaded_file:
                 title="VARIACIÓN DE GAP DE PPTO ($) POR TIENDA"
             )
             fig_tiendas.update_layout(height=max(400, len(df_tab2) * 22))
-            st.plotly_chart(fig_tiendas, use_container_width=True)
+            st.plotly_chart(fig_tiendas, use_container_width=True, key="fig_tiendas_chart")
 
 else:
     st.info("👈 Por favor sube el archivo ANALISIS GAP.xlsx en el menú lateral para desplegar el informe gerencial.")
