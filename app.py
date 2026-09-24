@@ -9,100 +9,109 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 🎨 PALETA DE COLORES CORPORATIVA Y ESTILOS CSS PREMIUM
+# 🎨 PALETA WARM CORPORATE / BEIGE BEIGE PREMIUM JUAN VALDEZ
 st.markdown("""
 <style>
-    .stApp { background-color: #F8FAFC; }
+    /* Fondo General Crema / Beige Cálido */
+    .stApp {
+        background-color: #F7F4EF !important;
+    }
     
+    /* Header Principal Tinto Ejecutivo */
     .jv-header {
-        background: linear-gradient(135deg, #7A0016 0%, #A20021 100%);
-        padding: 20px;
-        border-radius: 12px;
+        background: linear-gradient(135deg, #58000E 0%, #8C0017 100%);
+        padding: 22px;
+        border-radius: 14px;
         color: white;
         text-align: center;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 12px rgba(122, 0, 22, 0.25);
+        margin-bottom: 22px;
+        box-shadow: 0 6px 16px rgba(88, 0, 14, 0.2);
     }
-    .jv-header h1 { margin: 0; font-size: 26px; font-weight: 800; color: #FFFFFF; }
-    .jv-header p { margin: 5px 0 0 0; font-size: 13px; color: #F1F5F9; opacity: 0.9; }
+    .jv-header h1 { margin: 0; font-size: 26px; font-weight: 800; color: #FFFFFF; letter-spacing: 0.5px; }
+    .jv-header p { margin: 6px 0 0 0; font-size: 13px; color: #F7EBE8; opacity: 0.95; }
 
+    /* Tarjetas de Filtro Switch */
     .filter-card-red {
-        background-color: #FEF2F2;
-        border: 1px solid #FCA5A5;
-        border-left: 5px solid #DC2626;
+        background-color: #FCE8E8;
+        border: 1px solid #F87171;
+        border-left: 5px solid #991B1B;
         border-radius: 10px;
         padding: 10px 16px;
         margin-bottom: 15px;
-        box-shadow: 0 2px 6px rgba(220, 38, 38, 0.06);
+        box-shadow: 0 2px 6px rgba(153, 27, 27, 0.08);
     }
     .filter-card-title {
         font-weight: 800;
         font-size: 12px;
-        color: #991B1B;
+        color: #7F1D1D;
         text-transform: uppercase;
         margin: 0 0 4px 0;
     }
 
     div[data-testid="stCheckbox"] > label > div[role="checkbox"][aria-checked="true"] {
-        background-color: #DC2626 !important;
+        background-color: #8C0017 !important;
     }
 
+    /* Tarjetas KPI sobre Fondo Beige */
     .metric-card {
         background-color: #FFFFFF;
         border-radius: 12px;
-        padding: 14px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        padding: 15px;
+        box-shadow: 0 4px 12px rgba(90, 80, 70, 0.08);
+        border: 1px solid #EFE8DE;
         text-align: center;
         height: 100%;
     }
     .card-blue { border-left: 5px solid #2563EB; }
     .card-red { border-left: 5px solid #DC2626; }
     .card-green { border-left: 5px solid #16A34A; }
-    .card-yellow { border-left: 5px solid #EAB308; }
-    .card-purple { border-left: 5px solid #9333EA; }
-    .card-amber { border-left: 5px solid #D97706; }
+    .card-yellow { border-left: 5px solid #D97706; }
+    .card-purple { border-left: 5px solid #7C3AED; }
+    .card-amber { border-left: 5px solid #B45309; }
     
     .card-title {
         font-size: 10px;
         font-weight: 800;
-        color: #475569;
+        color: #524B42;
         text-transform: uppercase;
         margin-bottom: 4px;
     }
-    .card-value { font-size: 19px; font-weight: 800; margin: 2px 0; }
-    .card-sub { font-size: 10px; color: #64748B; font-weight: 500; }
+    .card-value { font-size: 20px; font-weight: 800; margin: 2px 0; }
+    .card-sub { font-size: 10px; color: #786F66; font-weight: 600; }
 
+    /* Cajas para Gerentes con Sombra Suave Warm */
     .gerente-box {
         background-color: #FFFFFF;
-        border-radius: 12px;
-        border: 1px solid #E2E8F0;
-        padding: 18px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        border-radius: 14px;
+        border: 1px solid #EBE3D5;
+        padding: 20px;
+        margin-bottom: 22px;
+        box-shadow: 0 4px 14px rgba(80, 70, 60, 0.06);
     }
     .gerente-title {
         font-size: 15px;
         font-weight: 800;
-        color: #7A0016;
-        border-bottom: 2px solid #F1F5F9;
+        color: #6B0011;
+        border-bottom: 2px solid #F4EFE6;
         padding-bottom: 8px;
-        margin-bottom: 12px;
+        margin-bottom: 14px;
     }
     
+    /* Estilo de Pestañas Elegantes */
     .stTabs [data-baseweb="tab-list"] { gap: 10px; }
     .stTabs [data-baseweb="tab"] {
-        height: 45px;
-        background-color: #FFFFFF;
+        height: 44px;
+        background-color: #EFE8DE;
         border-radius: 8px;
-        padding: 0px 20px;
+        padding: 0px 22px;
         font-weight: 700;
-        color: #475569;
-        border: 1px solid #E2E8F0;
+        color: #524B42;
+        border: 1px solid #E5DCCE;
     }
     .stTabs [aria-selected="true"] {
-        background-color: #A20021 !important;
+        background-color: #6B0011 !important;
         color: #FFFFFF !important;
-        border-color: #A20021 !important;
+        border-color: #6B0011 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -148,14 +157,9 @@ def cargar_datos(file):
         df['Ventas_Real'] = df['Ventas Act'].apply(limpiar_monto)
         df['Ppto_Real'] = df['Ppto'].apply(limpiar_monto)
         
-        # Extracción de Ventas AA si existen
         col_v_aa = [c for c in df.columns if 'Venta' in c and ('AA' in c or 'Ant' in c or 'Anterior' in c)]
-        if col_v_aa:
-            df['Ventas_AA'] = df[col_v_aa[0]].apply(limpiar_monto)
-        else:
-            df['Ventas_AA'] = 0.0
+        df['Ventas_AA'] = df[col_v_aa[0]].apply(limpiar_monto) if col_v_aa else 0.0
 
-        # Extracción de Transacciones Actuales y Transacciones AA
         col_tx_act = [c for c in df.columns if ('Transacc' in c or 'Tx' in c) and ('AA' not in c and 'Ant' not in c)]
         col_tx_aa = [c for c in df.columns if ('Transacc' in c or 'Tx' in c) and ('AA' in c or 'Ant' in c or 'Anterior' in c)]
         
@@ -231,11 +235,9 @@ if uploaded_file:
         df_merged['GAP_Tx_AA'] = df_merged['Tx_Real_Act'] - df_merged['Tx_AA_Act']
         df_merged['Var_Tx_AA_%'] = ((df_merged['Tx_Real_Act'] - df_merged['Tx_AA_Act']) / df_merged['Tx_AA_Act'].replace(0, 1)) * 100
 
-        # CÁLCULOS DE TICKET PROMEDIO Y EVALUACIÓN FRENTE A META (10%)
+        # CÁLCULOS DE TICKET PROMEDIO Y EVALUACIÓN FRENTE A META CONFIGURABLE
         df_merged['Ticket_Act'] = df_merged['Ventas_Real_Act'] / df_merged['Tx_Real_Act'].replace(0, 1)
         df_merged['Ticket_AA'] = df_merged['Ventas_AA_Act'] / df_merged['Tx_AA_Act'].replace(0, 1)
-        
-        # Meta Ticket = Ticket AA * (1 + meta%)
         df_merged['Ticket_Objetivo'] = df_merged['Ticket_AA'] * (1 + (meta_ticket_pct / 100.0))
         df_merged['GAP_Ticket_$'] = df_merged['Ticket_Act'] - df_merged['Ticket_Objetivo']
         df_merged['Var_Ticket_AA_%'] = ((df_merged['Ticket_Act'] - df_merged['Ticket_AA']) / df_merged['Ticket_AA'].replace(0, 1)) * 100
@@ -251,7 +253,7 @@ if uploaded_file:
 
         df_merged['Escenario'] = df_merged.apply(clasificar_escenario, axis=1)
 
-        # FILTROS SUPERIORES
+        # FILTROS SUPERIORES EN CAJAS TÉRMICAS
         f_col1, f_col2 = st.columns(2)
         with f_col1:
             st.markdown('<div class="filter-card-red"><div class="filter-card-title">Filtro Tiendas Pareto</div>', unsafe_allow_html=True)
@@ -267,7 +269,7 @@ if uploaded_file:
         if solo_pareto: df_base = df_base[df_base['Pareto'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
         if solo_comparable: df_base = df_base[df_base['Comparable_Val'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
 
-        # RENDERIZADO INTEGRAL DE KPIS (VENTAS + TRÁFICO AA + TICKET META)
+        # RENDERIZADO INTEGRAL DE KPIS
         def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
@@ -277,13 +279,11 @@ if uploaded_file:
             gap_ant = df_scope['GAP_Ant'].sum()
             cumpl_gen = (v_act / ppto_act * 100) if ppto_act > 0 else 0.0
 
-            # Transacciones AA
             tx_act = df_scope['Tx_Real_Act'].sum()
             tx_aa = df_scope['Tx_AA_Act'].sum()
             gap_tx_aa = tx_act - tx_aa
             var_tx_aa = ((tx_act - tx_aa) / tx_aa * 100) if tx_aa > 0 else 0.0
 
-            # Ticket Promedio vs Objetivos
             v_aa = df_scope['Ventas_AA_Act'].sum()
             ticket_act = (v_act / tx_act) if tx_act > 0 else 0.0
             ticket_aa = (v_aa / tx_aa) if tx_aa > 0 else 0.0
@@ -333,7 +333,7 @@ if uploaded_file:
                     number = {'suffix': "%", 'valueformat': ".1f"},
                     gauge = {
                         'axis': {'range': [0, 120]},
-                        'bar': {'color': "#16A34A" if cumpl_gen >= 100 else "#A20021"},
+                        'bar': {'color': "#16A34A" if cumpl_gen >= 100 else "#6B0011"},
                         'steps': [
                             {'range': [0, 85], 'color': "#FEE2E2"},
                             {'range': [85, 100], 'color': "#FEF3C7"},
@@ -341,11 +341,14 @@ if uploaded_file:
                         ]
                     }
                 ))
-                fig_g.update_layout(height=125, margin=dict(l=5, r=5, t=5, b=5))
+                fig_g.update_layout(
+                    height=125, margin=dict(l=5, r=5, t=5, b=5),
+                    paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)'
+                )
                 st.plotly_chart(fig_g, use_container_width=True, key=f"gauge_{key_suffix}")
 
             st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("<h4 style='text-align:left; color:#334155; font-size:13px; font-weight:800;'>🏬 ESTADO DE TIENDAS POR ESCENARIO</h4>", unsafe_allow_html=True)
+            st.markdown("<h4 style='text-align:left; color:#423B33; font-size:13px; font-weight:800;'>🏬 ESTADO DE TIENDAS POR ESCENARIO</h4>", unsafe_allow_html=True)
             
             conteo = df_activas['Escenario'].value_counts()
             e1, e2, e3, e4, e5, e6 = st.columns(6)
@@ -353,12 +356,12 @@ if uploaded_file:
             with e2: st.markdown(f"""<div class="metric-card card-green"><div class="card-title">AMPLIÓ SUPERÁVIT</div><div class="card-value" style="color:#16A34A;">{conteo.get('Amplió Superávit 🟢', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
             with e3: st.markdown(f"""<div class="metric-card card-green"><div class="card-title">MANTUVO SUPERÁVIT</div><div class="card-value" style="color:#16A34A;">{conteo.get('Mantuvo Superávit 🟢', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
             with e4: st.markdown(f"""<div class="metric-card card-green"><div class="card-title">RECORTÓ FALTANTE</div><div class="card-value" style="color:#16A34A;">{conteo.get('Recortó Faltante 🟢', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
-            with e5: st.markdown(f"""<div class="metric-card card-yellow"><div class="card-title">MANTUVO FALTANTE</div><div class="card-value" style="color:#EAB308;">{conteo.get('Mantuvo Faltante 🟡', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
+            with e5: st.markdown(f"""<div class="metric-card card-yellow"><div class="card-title">MANTUVO FALTANTE</div><div class="card-value" style="color:#D97706;">{conteo.get('Mantuvo Faltante 🟡', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
             with e6: st.markdown(f"""<div class="metric-card card-red"><div class="card-title">AUMENTÓ FALTANTE</div><div class="card-value" style="color:#DC2626;">{conteo.get('Aumentó Faltante 🔴', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
 
         tab1, tab2 = st.tabs(["📊 Informe Gerencial GAP", "🔍 Análisis por Gerencia"])
 
-        # PESTAÑA 1
+        # PESTAÑA 1: INFORME GERENCIAL
         with tab1:
             st.markdown("### 🏢 RESUMEN GENERAL DE LA COMPAÑÍA")
             render_kpi_block(df_base, key_suffix="global")
@@ -375,7 +378,7 @@ if uploaded_file:
                         render_kpi_block(df_g, key_suffix=f"ger_{idx}")
                         st.markdown("</div>", unsafe_allow_html=True)
 
-        # PESTAÑA 2
+        # PESTAÑA 2: ANÁLISIS DETALLADO
         with tab2:
             st.markdown("### 🎯 FILTROS DE ANÁLISIS DETALLADO")
             f1, f2 = st.columns(2)
@@ -413,20 +416,20 @@ if uploaded_file:
                 fig_sup = px.bar(
                     df_sup_agg.sort_values(by='Cumpl_%', ascending=True),
                     y='Supervisor', x='Cumpl_%', color='Cumpl_%',
-                    color_continuous_scale=['#A20021', '#FEF3C7', '#16A34A'],
+                    color_continuous_scale=['#8C0017', '#FEF3C7', '#16A34A'],
                     orientation='h', title="CUMPLIMIENTO DE PRESUPUESTO (%)", text_auto='.1f%'
                 )
-                fig_sup.update_layout(height=350)
+                fig_sup.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                 st.plotly_chart(fig_sup, use_container_width=True, key="fig_sup_chart")
                 
             with col_g2:
                 fig_tx = px.bar(
                     df_sup_agg.sort_values(by='GAP_Tx_AA', ascending=True),
                     y='Supervisor', x='GAP_Tx_AA', color='GAP_Tx_AA',
-                    color_continuous_scale=['#DC2626', '#EAB308', '#2563EB'],
+                    color_continuous_scale=['#DC2626', '#D97706', '#2563EB'],
                     orientation='h', title="GAP DE TRANSACCIONES VS AÑO ANTERIOR (Tx)", text_auto=',.0f'
                 )
-                fig_tx.update_layout(height=350)
+                fig_tx.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                 st.plotly_chart(fig_tx, use_container_width=True, key="fig_tx_chart")
 
             st.markdown("---")
@@ -440,12 +443,12 @@ if uploaded_file:
                     'Amplió Superávit 🟢': '#16A34A',
                     'Mantuvo Superávit 🟢': '#22C55E',
                     'Recortó Faltante 🟢': '#4ADE80',
-                    'Mantuvo Faltante 🟡': '#EAB308',
-                    'Aumentó Faltante 🔴': '#A20021'
+                    'Mantuvo Faltante 🟡': '#D97706',
+                    'Aumentó Faltante 🔴': '#8C0017'
                 },
                 orientation='h', title="VARIACIÓN DE GAP DE PPTO ($) POR TIENDA"
             )
-            fig_tiendas.update_layout(height=max(400, len(df_tab2) * 22))
+            fig_tiendas.update_layout(height=max(400, len(df_tab2) * 22), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
             st.plotly_chart(fig_tiendas, use_container_width=True, key="fig_tiendas_chart")
 
             # TABLA DE CAUSA RAÍZ INTERANUAL
