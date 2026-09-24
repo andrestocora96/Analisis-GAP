@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -125,7 +126,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# CABECERA
+# CABECERA INSTITUCIONAL
 st.markdown("""
 <div class="jv-header">
     <h1>INFORME GERENCIAL GAP VS PRESUPUESTO & ANÁLISIS DE TRÁFICO (AA)</h1>
@@ -186,15 +187,38 @@ def cargar_datos(file):
         return df_tot, hojas
     return pd.DataFrame(), []
 
-st.sidebar.header("📁 Configuración de Datos")
-uploaded_file = st.sidebar.file_uploader("Cargar ANALISIS GAP.xlsx", type=['xlsx'])
+# -----------------------------------------------------------------------------
+# OPCIÓN 1: LÓGICA DE PERSISTENCIA DIRECTA DESDE LA PANTALLA
+# -----------------------------------------------------------------------------
+NOMBRE_ARCHIVO_OFICIAL = "ANALISIS GAP.xlsx"
+
+st.sidebar.header("📁 Gestión de Base de Datos")
+
+uploaded_file = st.sidebar.file_uploader("Actualizar Excel (Opcional):", type=['xlsx'])
+
+if uploaded_file is not None:
+    if st.sidebar.button("💾 Guardar como Base Oficial", type="primary", use_container_width=True):
+        with open(NOMBRE_ARCHIVO_OFICIAL, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        st.cache_data.clear()
+        st.sidebar.success("✅ ¡Base de datos guardada permanentemente!")
+        st.rerun()
+
+file_to_process = None
+if uploaded_file is not None:
+    file_to_process = uploaded_file
+elif os.path.exists(NOMBRE_ARCHIVO_OFICIAL):
+    file_to_process = NOMBRE_ARCHIVO_OFICIAL
+    st.sidebar.caption("🟢 Usando base de datos oficial guardada.")
+else:
+    st.sidebar.warning("👈 Por favor sube el archivo ANALISIS GAP.xlsx y guárdalo como base oficial.")
 
 st.sidebar.markdown("---")
 st.sidebar.header("🎯 Metas Comerciales")
 meta_ticket_pct = st.sidebar.number_input("Meta Crecimiento Ticket Promedio (%):", value=10.0, step=0.5, format="%.1f")
 
-if uploaded_file:
-    df_tot, lista_ciclos = cargar_datos(uploaded_file)
+if file_to_process:
+    df_tot, lista_ciclos = cargar_datos(file_to_process)
     
     if len(lista_ciclos) >= 2:
         c_act = st.sidebar.selectbox("Semana Actual / Corte:", lista_ciclos, index=len(lista_ciclos)-1)
@@ -258,7 +282,6 @@ if uploaded_file:
 
         df_merged['Escenario'] = df_merged.apply(clasificar_escenario, axis=1)
 
-        # FILTROS SUPERIORES EN CAJAS TÉRMICAS
         f_col1, f_col2 = st.columns(2)
         with f_col1:
             st.markdown('<div class="filter-card-red"><div class="filter-card-title">Filtro Tiendas Pareto</div>', unsafe_allow_html=True)
@@ -274,7 +297,6 @@ if uploaded_file:
         if solo_pareto: df_base = df_base[df_base['Pareto'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
         if solo_comparable: df_base = df_base[df_base['Comparable_Val'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
 
-        # GENERADOR DE DIAGNÓSTICO GERENCIAL DETALLADO POR REGIONAL Y TIENDAS
         def generar_diagnostico_gerencial(df_data):
             v_act = df_data['Ventas_Real_Act'].sum()
             ppto_act = df_data['Ppto_Real_Act'].sum()
@@ -298,11 +320,8 @@ if uploaded_file:
             tiendas_verdes = conteo.get('Pasa de Negativo a Positivo 🟢', 0) + conteo.get('Amplió Superávit 🟢', 0) + conteo.get('Recortó Faltante 🟢', 0)
 
             analisis = []
-            
-            # 1. Diagnóstico Consolidado
             analisis.append(f"<b>📌 Diagnóstico Consolidado Compañía:</b><br>El cumplimiento global se sitúa en el <b>{cumpl:.1f}%</b> con un GAP de presupuesto de <b>${gap_act:,.0f}</b>. De un total de {len(df_data)} puntos evaluados, <b>{tiendas_verdes}</b> muestran una evolución positiva de GAP, mientras que <b>{tiendas_rojas + tiendas_amarillas}</b> puntos requieren intervención estratégica (<b>{tiendas_rojas}</b> en 'Aumentó Faltante' y <b>{tiendas_amarillas}</b> en 'Mantuvo Faltante').")
             
-            # 2. Causa Raíz
             if gap_tx < 0 and gap_tk < 0:
                 causa = f"<b>🔍 Causa Raíz Comercial:</b> Desviación por Causal Doble. Se identifica una pérdida de tráfico interanual de <b>{gap_tx:+,.0f} Transacciones ({var_tx:+.1f}% vs AA)</b> sumada a un Ticket Promedio de <b>${tk_act:,.0f}</b> que no alcanza la meta propuesta del {meta_ticket_pct:.0f}% (Faltan ${abs(gap_tk):,.0f} por transacción)."
             elif gap_tx < 0:
@@ -313,9 +332,7 @@ if uploaded_file:
                 causa = "<b>🔍 Causa Raíz Comercial:</b> Desempeño Operativo Eficiente. Se registran crecimientos sólidos tanto en volumen de transacciones como en ticket promedio frente al año anterior."
             analisis.append(causa)
 
-            # 3. Análisis Detallado por Gerencia Regional y Tiendas Foco
             analisis.append("<b>📍 Análisis por Gerencia Regional y Tiendas Foco de Atención:</b>")
-            
             gerentes = sorted([g for g in df_data['Gerente'].dropna().unique() if str(g) != 'nan'])
             
             for ger in gerentes:
@@ -325,23 +342,19 @@ if uploaded_file:
                 gap_g = df_g['GAP_Act'].sum()
                 cump_g = (v_g / p_g * 100) if p_g > 0 else 0.0
                 
-                # Identificar tiendas críticas en la regional
                 df_foco = df_g[df_g['Escenario'].isin(['Aumentó Faltante 🔴', 'Mantuvo Faltante 🟡'])].sort_values(by='GAP_Act', ascending=True)
                 
                 txt_ger = f"• <b>Gerencia {str(ger).upper()}:</b> Cumplimiento al <b>{cump_g:.1f}%</b> | GAP Presupuesto: <b>${gap_g:,.0f}</b>."
-                
                 if not df_foco.empty:
                     txt_ger += f"<br>&nbsp;&nbsp;&nbsp;&nbsp;⚠️ <i>Tiendas Foco ({len(df_foco)} Puntos):</i>"
                     for _, row_f in df_foco.iterrows():
                         txt_ger += f"<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <b>{row_f['Tienda']}</b> (Sup. {row_f['Supervisor']}): Cumpl. <b>{row_f['Cumpl_Act_%']:.1f}%</b> | GAP: <b>${row_f['GAP_Act']:,.0f}</b> | Estado: {row_f['Escenario']}"
                 else:
                     txt_ger += "<br>&nbsp;&nbsp;&nbsp;&nbsp;✅ <i>Sin tiendas en estado crítico de alerta.</i>"
-                
                 analisis.append(txt_ger)
 
             return "<br><br>".join(analisis)
 
-        # RENDERIZADO INTEGRAL DE KPIS
         def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
@@ -568,4 +581,4 @@ if uploaded_file:
             )
 
 else:
-    st.info("👈 Por favor sube el archivo ANALISIS GAP.xlsx en el menú lateral para desplegar el informe gerencial.")
+    st.info("👈 Por favor sube el archivo ANALISIS GAP.xlsx en el menú lateral y presiona 'Guardar como Base Oficial'.")
