@@ -326,7 +326,7 @@ st.sidebar.header("🎯 Metas Comerciales")
 meta_ticket_pct = st.sidebar.number_input("Meta Crecimiento Ticket Promedio (%):", value=10.0, step=0.5, format="%.1f")
 
 # -----------------------------------------------------------------------------
-# POP-UP EXCLUSIVO CON TIENDA Y VALOR DE EVOLUCIÓN DE GAP ($)
+# POP-UP CON TIENDA Y EVOLUCIÓN EN PESOS DE GAP
 # -----------------------------------------------------------------------------
 @st.dialog("🏬 Lista de Tiendas por Escenario", width="medium")
 def mostrar_popup_escenario(nombre_escenario, df_filtrado):
@@ -393,7 +393,6 @@ if file_to_process:
         
         df_merged['Cumpl_Act_%'] = (df_merged['Ventas_Real_Act'] / df_merged['Ppto_Real_Act'].replace(0, 1)) * 100
 
-        # Crecimiento de Ventas Vs Año Anterior (AA)
         df_merged['Diff_Ventas_AA'] = df_merged['Ventas_Real_Act'] - df_merged['Ventas_AA_Act']
         df_merged['Var_Ventas_AA_%'] = ((df_merged['Ventas_Real_Act'] - df_merged['Ventas_AA_Act']) / df_merged['Ventas_AA_Act'].replace(0, 1)) * 100
 
@@ -406,7 +405,6 @@ if file_to_process:
         df_merged['GAP_Ticket_$'] = df_merged['Ticket_Act'] - df_merged['Ticket_Objetivo']
         df_merged['Var_Ticket_AA_%'] = ((df_merged['Ticket_Act'] - df_merged['Ticket_AA']) / df_merged['Ticket_AA'].replace(0, 1)) * 100
 
-        # CLASIFICACIÓN DE ESCENARIOS
         def clasificar_escenario(row):
             g_ant, g_act, diff = row['GAP_Ant'], row['GAP_Act'], row['Evolucion_GAP_$']
             if g_act >= 0:
@@ -441,6 +439,7 @@ if file_to_process:
         if solo_pareto: df_base = df_base[df_base['Pareto'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
         if solo_comparable: df_base = df_base[df_base['Comparable_Val'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
 
+        # DIAGNÓSTICO GERENCIAL INTEGRANDO ANÁLISIS PARETO Y PARTICIPACIÓN
         def generar_diagnostico_gerencial(df_data):
             v_act = df_data['Ventas_Real_Act'].sum()
             ppto_act = df_data['Ppto_Real_Act'].sum()
@@ -482,6 +481,27 @@ if file_to_process:
             else:
                 causa = "<b>🔍 Causa Raíz Comercial:</b> Desempeño Operativo Sostenido."
             analisis.append(causa)
+
+            # --- NUEVO BLOQUE: ENFOQUE EN TIENDAS PARETO ---
+            patron_p = 'SI|S|1|PARETO|TRUE'
+            df_pareto = df_data[df_data['Pareto'].astype(str).str.upper().str.contains(patron_p, regex=True, na=False)].copy()
+            
+            if not df_pareto.empty:
+                df_pareto['Part_Venta_%'] = (df_pareto['Ventas_Real_Act'] / (v_act if v_act > 0 else 1)) * 100
+                df_pareto_criticas = df_pareto[df_pareto['GAP_Act'] < 0].sort_values(by='Ventas_Real_Act', ascending=False)
+                
+                txt_pareto = f"<b>⭐ Enfoque Prioritario en Tiendas PARETO (Relevancia en Venta Total):</b><br>"
+                txt_pareto += f"Las tiendas Pareto representan el núcleo del volumen comercial. Se identifican <b>{len(df_pareto_criticas)} de {len(df_pareto)} tiendas Pareto</b> que presentan déficit presupuestal ($) y requieren foco inmediato:"
+                
+                if not df_pareto_criticas.empty:
+                    for _, row_p in df_pareto_criticas.head(7).iterrows():
+                        txt_pareto += f"<br>&nbsp;&nbsp;&nbsp;&nbsp;🎯 <b>{row_p['Tienda']}</b> (Gerencia: {str(row_p['Gerente']).upper()} | Sup: {row_p['Supervisor']}):<br>"
+                        txt_pareto += f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• Participación en Venta Total: <b>{row_p['Part_Venta_%']:.2f}%</b> (Venta: ${row_p['Ventas_Real_Act']:,.0f})<br>"
+                        txt_pareto += f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• Cumplimiento Presupuesto: <b>{row_p['Cumpl_Act_%']:.1f}%</b> | GAP Faltante: <b>${row_p['GAP_Act']:,.0f}</b> | Var Tx AA: <b>{row_p['Var_Tx_AA_%']:+.1f}%</b>"
+                else:
+                    txt_pareto += "<br>&nbsp;&nbsp;&nbsp;&nbsp;✅ <i>Todas las tiendas Pareto registradas se encuentran operando con superávit o en cumplimiento.</i>"
+                
+                analisis.append(txt_pareto)
 
             analisis.append("<b>📍 Análisis por Gerencia Regional y Tiendas Foco de Atención Crítica:</b>")
             gerentes = sorted([g for g in df_data['Gerente'].dropna().unique() if str(g) != 'nan'])
