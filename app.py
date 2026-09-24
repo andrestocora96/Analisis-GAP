@@ -558,7 +558,15 @@ if file_to_process:
         # PESTAÑA 2: ANÁLISIS DETALLADO
         with tab2:
             st.markdown("### 🎯 FILTROS DE ANÁLISIS DETALLADO")
-            f1, f2 = st.columns(2)
+            
+            f1, f2, f3 = st.columns([2, 2, 1])
+            
+            # Inicialización de estado de sesión para el botón de reinicio
+            if "tab2_ger" not in st.session_state:
+                st.session_state["tab2_ger"] = "Todos"
+            if "tab2_sup" not in st.session_state:
+                st.session_state["tab2_sup"] = "Todos"
+
             with f1:
                 gerentes_sel = ["Todos"] + sorted([g for g in df_base['Gerente'].dropna().unique() if str(g) != 'nan'])
                 s_ger = st.selectbox("Seleccionar Gerente:", gerentes_sel, key="tab2_ger")
@@ -566,6 +574,12 @@ if file_to_process:
                 df_temp = df_base if s_ger == "Todos" else df_base[df_base['Gerente'] == s_ger]
                 sups_sel = ["Todos"] + sorted([s for s in df_temp['Supervisor'].dropna().unique() if str(s) != 'nan'])
                 s_sup = st.selectbox("Seleccionar Supervisor:", sups_sel, key="tab2_sup")
+            with f3:
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("🔄 Reiniciar Filtros", use_container_width=True):
+                    st.session_state["tab2_ger"] = "Todos"
+                    st.session_state["tab2_sup"] = "Todos"
+                    st.rerun()
 
             df_tab2 = df_base.copy()
             if s_ger != "Todos": df_tab2 = df_tab2[df_tab2['Gerente'] == s_ger]
