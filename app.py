@@ -165,6 +165,39 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# -----------------------------------------------------------------------------
+# 🔒 CONTROL DE ACCESO MEDIANTE CONTRASEÑA
+# -----------------------------------------------------------------------------
+PASSWORD_CORRECTA = "JuanValdez2026*"
+
+def verificar_password():
+    if "autenticado" not in st.session_state:
+        st.session_state["autenticado"] = False
+
+    if not st.session_state["autenticado"]:
+        col1, col2, col3 = st.columns([1, 1.2, 1])
+        with col2:
+            st.markdown("<br><br>", unsafe_allow_html=True)
+            st.markdown("""
+            <div style="background-color: #FFFFFF; padding: 30px; border-radius: 14px; border: 1px solid #D1C7B7; text-align: center; box-shadow: 0 6px 16px rgba(80, 70, 60, 0.1);">
+                <h2 style="color: #6B0011; margin-bottom: 10px;">☕ Acceso Restringido</h2>
+                <p style="color: #64748B; font-size: 13px;">Ingrese la clave de acceso autorizada para ver el Informe Gerencial GAP Juan Valdez.</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            pwd_input = st.text_input("Contraseña:", type="password", key="input_pwd")
+            if st.button("Ingresar al Tablero", type="primary", use_container_width=True):
+                if pwd_input == PASSWORD_CORRECTA:
+                    st.session_state["autenticado"] = True
+                    st.rerun()
+                else:
+                    st.error("❌ Contraseña incorrecta. Intente nuevamente.")
+        return False
+    return True
+
+if not verificar_password():
+    st.stop()
+
 # CABECERA INSTITUCIONAL
 st.markdown("""
 <div class="jv-header">
@@ -230,6 +263,12 @@ def cargar_datos(file):
 NOMBRE_ARCHIVO_OFICIAL = "ANALISIS GAP.xlsx"
 
 st.sidebar.header("📁 Gestión de Base de Datos")
+
+if st.sidebar.button("🔒 Cerrar Sesión", use_container_width=True):
+    st.session_state["autenticado"] = False
+    st.rerun()
+
+st.sidebar.markdown("---")
 uploaded_file = st.sidebar.file_uploader("Actualizar Excel (Opcional):", type=['xlsx'])
 
 if uploaded_file is not None:
@@ -559,13 +598,15 @@ if file_to_process:
         with tab2:
             st.markdown("### 🎯 FILTROS DE ANÁLISIS DETALLADO")
             
-            f1, f2, f3 = st.columns([2, 2, 1])
+            # 4 COLUMNAS DE FILTROS: GERENTE, SUPERVISOR, TIENDA Y REINICIO
+            f1, f2, f3, f4 = st.columns([2, 2, 2, 1])
             
-            # Inicialización de estado de sesión para el botón de reinicio
             if "tab2_ger" not in st.session_state:
                 st.session_state["tab2_ger"] = "Todos"
             if "tab2_sup" not in st.session_state:
                 st.session_state["tab2_sup"] = "Todos"
+            if "tab2_tienda" not in st.session_state:
+                st.session_state["tab2_tienda"] = "Todas"
 
             with f1:
                 gerentes_sel = ["Todos"] + sorted([g for g in df_base['Gerente'].dropna().unique() if str(g) != 'nan'])
@@ -575,18 +616,27 @@ if file_to_process:
                 sups_sel = ["Todos"] + sorted([s for s in df_temp['Supervisor'].dropna().unique() if str(s) != 'nan'])
                 s_sup = st.selectbox("Seleccionar Supervisor:", sups_sel, key="tab2_sup")
             with f3:
+                df_temp_tienda = df_temp if s_sup == "Todos" else df_temp[df_temp['Supervisor'] == s_sup]
+                tiendas_sel = ["Todas"] + sorted([t for t in df_temp_tienda['Tienda'].dropna().unique() if str(t) != 'nan'])
+                s_tienda = st.selectbox("Seleccionar Tienda:", tiendas_sel, key="tab2_tienda")
+            with f4:
                 st.markdown("<br>", unsafe_allow_html=True)
                 if st.button("🔄 Reiniciar Filtros", use_container_width=True):
                     st.session_state["tab2_ger"] = "Todos"
                     st.session_state["tab2_sup"] = "Todos"
+                    st.session_state["tab2_tienda"] = "Todas"
                     st.rerun()
 
             df_tab2 = df_base.copy()
             if s_ger != "Todos": df_tab2 = df_tab2[df_tab2['Gerente'] == s_ger]
             if s_sup != "Todos": df_tab2 = df_tab2[df_tab2['Supervisor'] == s_sup]
+            if s_tienda != "Todas": df_tab2 = df_tab2[df_tab2['Tienda'] == s_tienda]
 
             st.markdown("---")
-            st.markdown(f"### 📈 INDICADORES CLAVE DE GESTIÓN ({s_sup if s_sup != 'Todos' else (s_ger if s_ger != 'Todos' else 'GLOBAL')})")
+            
+            # Etiqueta de la cabecera dinámica de indicadores
+            label_scope = s_tienda if s_tienda != 'Todas' else (s_sup if s_sup != 'Todos' else (s_ger if s_ger != 'Todos' else 'GLOBAL'))
+            st.markdown(f"### 📈 INDICADORES CLAVE DE GESTIÓN ({label_scope})")
             render_kpi_block(df_tab2, key_suffix="tab2_kpis")
 
             st.markdown("---")
@@ -612,10 +662,11 @@ if file_to_process:
                     orientation='h', title="CUMPLIMIENTO DE PRESUPUESTO (%) POR SUPERVISOR",
                     text_auto='.1f'
                 )
+                fig_sup.update_coloraxes(showscale=False)
                 fig_sup.update_traces(texttemplate='%{x:.1f}%', textposition='outside', cliponaxis=False)
                 fig_sup.update_layout(
                     height=350, 
-                    margin=dict(r=80, l=10, t=30, b=10),
+                    margin=dict(r=90, l=10, t=30, b=10),
                     paper_bgcolor='rgba(0,0,0,0)', 
                     plot_bgcolor='rgba(0,0,0,0)'
                 )
@@ -629,10 +680,11 @@ if file_to_process:
                     orientation='h', title="VARIACIÓN % DE TRANSACCIONES VS AÑO ANTERIOR POR SUPERVISOR",
                     text_auto='.1f'
                 )
+                fig_tx.update_coloraxes(showscale=False)
                 fig_tx.update_traces(texttemplate='%{x:+.1f}%', textposition='outside', cliponaxis=False)
                 fig_tx.update_layout(
                     height=350, 
-                    margin=dict(r=80, l=10, t=30, b=10),
+                    margin=dict(r=90, l=10, t=30, b=10),
                     paper_bgcolor='rgba(0,0,0,0)', 
                     plot_bgcolor='rgba(0,0,0,0)'
                 )
@@ -660,7 +712,7 @@ if file_to_process:
                 fig_tiendas.update_traces(cliponaxis=False)
                 fig_tiendas.update_layout(
                     height=max(420, len(df_tab2) * 22), 
-                    margin=dict(r=50, l=10, t=30, b=10),
+                    margin=dict(r=60, l=10, t=30, b=10),
                     paper_bgcolor='rgba(0,0,0,0)', 
                     plot_bgcolor='rgba(0,0,0,0)'
                 )
@@ -673,10 +725,11 @@ if file_to_process:
                     color_continuous_scale=['#DC2626', '#EAB308', '#2563EB'],
                     orientation='h', title="VARIACIÓN DE TRANSACCIONES VS AÑO ANTERIOR (%) POR TIENDA"
                 )
+                fig_tx_tiendas.update_coloraxes(showscale=False)
                 fig_tx_tiendas.update_traces(texttemplate='%{x:+.1f}%', textposition='outside', cliponaxis=False)
                 fig_tx_tiendas.update_layout(
                     height=max(420, len(df_tab2) * 22), 
-                    margin=dict(r=80, l=10, t=30, b=10),
+                    margin=dict(r=90, l=10, t=30, b=10),
                     paper_bgcolor='rgba(0,0,0,0)', 
                     plot_bgcolor='rgba(0,0,0,0)'
                 )
