@@ -9,7 +9,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 🎨 PALETA DE COLORES CORPORATIVA Y ESTILOS CSS PREMIUM JUAN VALDEZ CON SWITCH ROSA
+# 🎨 PALETA DE COLORES CORPORATIVA Y ESTILOS CSS PREMIUM JUAN VALDEZ
 st.markdown("""
 <style>
     /* Estilo General */
@@ -41,28 +41,28 @@ st.markdown("""
         opacity: 0.9;
     }
 
-    /* Caja del Filtro Switch Rosa Claro */
-    .pareto-container {
-        background-color: #FDF2F8;
-        border: 2px solid #F472B6;
-        border-radius: 12px;
-        padding: 12px 20px;
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        box-shadow: 0 2px 8px rgba(244, 114, 182, 0.15);
+    /* Cajas de Filtro Switch Rojo Claro Corporativo */
+    .filter-card-red {
+        background-color: #FEF2F2;
+        border: 1px solid #FCA5A5;
+        border-left: 5px solid #DC2626;
+        border-radius: 10px;
+        padding: 10px 16px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 6px rgba(220, 38, 38, 0.06);
     }
-    .pareto-title {
+    .filter-card-title {
         font-weight: 800;
-        font-size: 14px;
-        color: #9D174D;
-        margin: 0;
+        font-size: 13px;
+        color: #991B1B;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0 0 4px 0;
     }
 
-    /* Personalización del Toggle de Streamlit a Rosa */
+    /* Personalización del Switch de Streamlit a Rojo Corporativo */
     div[data-testid="stCheckbox"] > label > div[role="checkbox"][aria-checked="true"] {
-        background-color: #EC4899 !important;
+        background-color: #DC2626 !important;
     }
 
     /* Tarjetas de KPI Principales */
@@ -190,7 +190,7 @@ def cargar_datos(file):
     if dfs:
         df_tot = pd.concat(dfs, ignore_index=True)
         if not df_bd.empty:
-            cols_bd = ['Tienda_Clean', 'Gerente', 'Supervisor', 'Ciudad', 'Segmento', 'Comparable ', 'Pareto']
+            cols_bd = ['Tienda_Clean', 'Gerente', 'Supervisor', 'Ciudad', 'Segmento', 'Comparable ', 'Comparable', 'Pareto']
             cols_bd = [c for c in cols_bd if c in df_bd.columns]
             df_tot = pd.merge(df_tot, df_bd[cols_bd], on='Tienda_Clean', how='left')
         return df_tot, hojas
@@ -210,11 +210,16 @@ if uploaded_file:
         df_act = df_tot[df_tot['Ciclo'] == c_act].copy()
         df_ant = df_tot[df_tot['Ciclo'] == c_ant].copy()
         
+        # Identificar columnas relevantes
         cols_act = ['Tienda_Clean', 'Tienda', 'Gerente', 'Supervisor', 'Ciudad', 'Segmento', 'Ventas_Real', 'Ppto_Real']
-        if 'Pareto' in df_act.columns: cols_act.append('Pareto')
-        
+        for col_extra in ['Pareto', 'Comparable ', 'Comparable']:
+            if col_extra in df_act.columns and col_extra not in cols_act:
+                cols_act.append(col_extra)
+                
         cols_ant = ['Tienda_Clean', 'Tienda', 'Gerente', 'Supervisor', 'Ventas_Real', 'Ppto_Real']
-        if 'Pareto' in df_ant.columns: cols_ant.append('Pareto')
+        for col_extra in ['Pareto', 'Comparable ', 'Comparable']:
+            if col_extra in df_ant.columns and col_extra not in cols_ant:
+                cols_ant.append(col_extra)
 
         df_merged = pd.merge(
             df_act[cols_act],
@@ -228,12 +233,24 @@ if uploaded_file:
         df_merged['Gerente'] = df_merged['Gerente_Act'].combine_first(df_merged['Gerente_Ant'])
         df_merged['Supervisor'] = df_merged['Supervisor_Act'].combine_first(df_merged['Supervisor_Ant'])
         
+        # Unificar Columna Pareto
         if 'Pareto_Act' in df_merged.columns and 'Pareto_Ant' in df_merged.columns:
             df_merged['Pareto'] = df_merged['Pareto_Act'].combine_first(df_merged['Pareto_Ant'])
         elif 'Pareto_Act' in df_merged.columns:
             df_merged['Pareto'] = df_merged['Pareto_Act']
         elif 'Pareto' not in df_merged.columns:
             df_merged['Pareto'] = 'NO'
+
+        # Unificar Columna Comparable
+        comp_col = None
+        for c in ['Comparable _Act', 'Comparable_Act', 'Comparable ']:
+            if c in df_merged.columns:
+                comp_col = c
+                break
+        if comp_col:
+            df_merged['Comparable_Val'] = df_merged[comp_col]
+        else:
+            df_merged['Comparable_Val'] = 'NO'
             
         for col in ['Ventas_Real_Act', 'Ppto_Real_Act', 'Ventas_Real_Ant', 'Ppto_Real_Ant']:
             df_merged[col] = df_merged[col].fillna(0.0)
@@ -267,23 +284,31 @@ if uploaded_file:
         df_merged['Escenario'] = df_merged.apply(clasificar_escenario, axis=1)
 
         # ----------------------------------------------------------------------
-        # BARRA DE FILTRO DINÁMICO ESTILO SWITCH ROSA PARA TIENDAS PARETO
+        # FILTROS COMBINADOS: PARETO Y COMPARABLES (ROJO CLARO CORPORATIVO)
         # ----------------------------------------------------------------------
-        col_pareto, col_blank = st.columns([1, 2])
-        with col_pareto:
-            st.markdown('<div class="pareto-container"><span class="pareto-title">🌸 FILTRAR TIENDAS PARETO</span>', unsafe_allow_html=True)
-            solo_pareto = st.toggle("Activar Filtro Pareto", value=False, key="switch_pareto")
+        f_col1, f_col2 = st.columns(2)
+        
+        with f_col1:
+            st.markdown('<div class="filter-card-red"><div class="filter-card-title">Filtro Tiendas Pareto</div>', unsafe_allow_html=True)
+            solo_pareto = st.toggle("Solo Tiendas Pareto", value=False, key="sw_pareto")
             st.markdown('</div>', unsafe_allow_html=True)
 
-        if solo_pareto:
-            # Filtrar por valores que indiquen Pareto en la Base de Datos
-            patron_pareto = 'SI|S|1|PARETO|TRUE'
-            df_base = df_merged[df_merged['Pareto'].astype(str).str.upper().str.contains(patron_pareto, regex=True, na=False)].copy()
-            st.toast("🌸 Filtro Pareto Aplicado: Mostrando solo Tiendas Pareto", icon="✨")
-        else:
-            df_base = df_merged.copy()
+        with f_col2:
+            st.markdown('<div class="filter-card-red"><div class="filter-card-title">Filtro Tiendas Comparables</div>', unsafe_allow_html=True)
+            solo_comparable = st.toggle("Solo Tiendas Comparables", value=False, key="sw_comp")
+            st.markdown('</div>', unsafe_allow_html=True)
 
-        # RENDERIZADO DE MÉRITO DE TARJETAS SUPERIORES (CON KEY ÚNICA)
+        # Aplicar lógica de filtrado cruzado dinámico
+        df_base = df_merged.copy()
+        patron_valid = 'SI|S|1|PARETO|TRUE|COMPARABLE'
+
+        if solo_pareto:
+            df_base = df_base[df_base['Pareto'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
+            
+        if solo_comparable:
+            df_base = df_base[df_base['Comparable_Val'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
+
+        # RENDERIZADO DE MÉRITO DE TARJETAS SUPERIORES
         def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
