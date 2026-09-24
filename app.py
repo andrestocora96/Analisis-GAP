@@ -13,8 +13,12 @@ st.set_page_config(
 # 🎨 PALETA WARM CORPORATE / BEIGE PREMIUM JUAN VALDEZ
 st.markdown("""
 <style>
-    .stApp { background-color: #F7F4EF !important; }
+    /* Fondo General Crema / Beige Cálido */
+    .stApp {
+        background-color: #F7F4EF !important;
+    }
     
+    /* Header Principal Tinto Ejecutivo */
     .jv-header {
         background: linear-gradient(135deg, #58000E 0%, #8C0017 100%);
         padding: 22px;
@@ -27,6 +31,7 @@ st.markdown("""
     .jv-header h1 { margin: 0; font-size: 26px; font-weight: 800; color: #FFFFFF; letter-spacing: 0.5px; }
     .jv-header p { margin: 6px 0 0 0; font-size: 13px; color: #F7EBE8; opacity: 0.95; }
 
+    /* Tarjetas de Filtro Switch */
     .filter-card-red {
         background-color: #FCE8E8;
         border: 1px solid #F87171;
@@ -48,6 +53,7 @@ st.markdown("""
         background-color: #8C0017 !important;
     }
 
+    /* Tarjetas KPI sobre Fondo Beige */
     .metric-card {
         background-color: #FFFFFF;
         border-radius: 12px;
@@ -63,11 +69,13 @@ st.markdown("""
     .card-yellow { border-left: 5px solid #D97706; }
     .card-purple { border-left: 5px solid #7C3AED; }
     .card-amber { border-left: 5px solid #B45309; }
+    .card-teal { border-left: 5px solid #0D9488; }
     
     .card-title { font-size: 10px; font-weight: 800; color: #524B42; text-transform: uppercase; margin-bottom: 4px; }
     .card-value { font-size: 20px; font-weight: 800; margin: 2px 0; }
     .card-sub { font-size: 10px; color: #786F66; font-weight: 600; }
 
+    /* Caja de Resumen Ejecutivo */
     .ai-box {
         background-color: #FFFFFF;
         border: 1px solid #D97706;
@@ -79,6 +87,7 @@ st.markdown("""
     }
     .ai-title { font-size: 16px; font-weight: 800; color: #78350F; margin-bottom: 12px; border-bottom: 1px solid #FDE68A; padding-bottom: 6px; }
 
+    /* Cajas para Gerentes con Encabezado Oscuro Diferencial */
     .gerente-box {
         background-color: #FFFFFF;
         border-radius: 14px;
@@ -99,6 +108,7 @@ st.markdown("""
         box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     }
     
+    /* Estilo de Pestañas Elegantes */
     .stTabs [data-baseweb="tab-list"] { gap: 10px; }
     .stTabs [data-baseweb="tab"] {
         height: 44px;
@@ -121,7 +131,7 @@ st.markdown("""
 st.markdown("""
 <div class="jv-header">
     <h1>INFORME GERENCIAL GAP VS PRESUPUESTO & ANÁLISIS DE TRÁFICO (AA)</h1>
-    <p>Control Integrado de Ventas, Presupuesto, GAP Transacciones Interanual y Meta de Ticket Promedio</p>
+    <p>Control Integrado de Ventas, Crecimiento AA, Presupuesto, GAP Transacciones Interanual y Meta de Ticket Promedio</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -250,6 +260,10 @@ if file_to_process:
         df_merged['Evolucion_GAP_$'] = df_merged['GAP_Act'] - df_merged['GAP_Ant']
         df_merged['Cumpl_Act_%'] = (df_merged['Ventas_Real_Act'] / df_merged['Ppto_Real_Act'].replace(0, 1)) * 100
 
+        # Crecimiento de Ventas Vs Año Anterior (AA)
+        df_merged['Diff_Ventas_AA'] = df_merged['Ventas_Real_Act'] - df_merged['Ventas_AA_Act']
+        df_merged['Var_Ventas_AA_%'] = ((df_merged['Ventas_Real_Act'] - df_merged['Ventas_AA_Act']) / df_merged['Ventas_AA_Act'].replace(0, 1)) * 100
+
         df_merged['GAP_Tx_AA'] = df_merged['Tx_Real_Act'] - df_merged['Tx_AA_Act']
         df_merged['Var_Tx_AA_%'] = ((df_merged['Tx_Real_Act'] - df_merged['Tx_AA_Act']) / df_merged['Tx_AA_Act'].replace(0, 1)) * 100
 
@@ -259,11 +273,9 @@ if file_to_process:
         df_merged['GAP_Ticket_$'] = df_merged['Ticket_Act'] - df_merged['Ticket_Objetivo']
         df_merged['Var_Ticket_AA_%'] = ((df_merged['Ticket_Act'] - df_merged['Ticket_AA']) / df_merged['Ticket_AA'].replace(0, 1)) * 100
 
-        # LÓGICA CORREGIDA Y ESTRICTA DE ESCENARIOS
+        # CLASIFICACIÓN DE ESCENARIOS
         def clasificar_escenario(row):
             g_ant, g_act, diff = row['GAP_Ant'], row['GAP_Act'], row['Evolucion_GAP_$']
-            
-            # Casos de Superávit (Cumplimiento >= 100% / GAP Activo Positivo)
             if g_act >= 0:
                 if g_ant < 0:
                     return "Pasa de Negativo a Positivo 🟢"
@@ -271,7 +283,6 @@ if file_to_process:
                     return "Amplió Superávit 🟢"
                 else:
                     return "Mantuvo Superávit 🟢"
-            # Casos de Faltante (Cumplimiento < 100% / GAP Activo Negativo)
             else:
                 if diff > 0:
                     return "Recortó Faltante 🟢"
@@ -297,33 +308,30 @@ if file_to_process:
         if solo_pareto: df_base = df_base[df_base['Pareto'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
         if solo_comparable: df_base = df_base[df_base['Comparable_Val'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
 
-        # GENERADOR DE DIAGNÓSTICO GERENCIAL REVISADO CON TRES CONDICIONES EXACTAS DE TIENDA FOCO
         def generar_diagnostico_gerencial(df_data):
             v_act = df_data['Ventas_Real_Act'].sum()
             ppto_act = df_data['Ppto_Real_Act'].sum()
             gap_act = df_data['GAP_Act'].sum()
             cumpl = (v_act / ppto_act * 100) if ppto_act > 0 else 0.0
             
+            v_aa = df_data['Ventas_AA_Act'].sum()
+            diff_v_aa = v_act - v_aa
+            var_v_aa = ((v_act - v_aa) / v_aa * 100) if v_aa > 0 else 0.0
+
             tx_act = df_data['Tx_Real_Act'].sum()
             tx_aa = df_data['Tx_AA_Act'].sum()
             gap_tx = tx_act - tx_aa
             var_tx = ((tx_act - tx_aa) / tx_aa * 100) if tx_aa > 0 else 0.0
             
             tk_act = (v_act / tx_act) if tx_act > 0 else 0.0
-            v_aa = df_data['Ventas_AA_Act'].sum()
             tk_aa = (v_aa / tx_aa) if tx_aa > 0 else 0.0
             tk_obj = tk_aa * (1 + (meta_ticket_pct / 100.0))
             gap_tk = tk_act - tk_obj
             
             conteo = df_data['Escenario'].value_counts()
-            tiendas_rojas = conteo.get('Aumentó Faltante 🔴', 0)
-            tiendas_amarillas = conteo.get('Mantuvo Faltante 🟡', 0)
             tiendas_verdes = conteo.get('Pasa de Negativo a Positivo 🟢', 0) + conteo.get('Amplió Superávit 🟢', 0) + conteo.get('Mantuvo Superávit 🟢', 0) + conteo.get('Recortó Faltante 🟢', 0)
 
-            # IDENTIFICACIÓN DE TIENDAS FOCO CON TRES CONDICIONES SIMULTÁNEAS:
-            # 1. GAP Negativo / Aumentó Faltante / Mantuvo Faltante
-            # 2. Decrece en Transacciones (GAP Tx < 0)
-            # 3. No alcanza Meta de Ticket Promedio (GAP Ticket < 0)
+            # Criterio de Tiendas Foco
             cond_gap = df_data['GAP_Act'] < 0
             cond_tx = df_data['GAP_Tx_AA'] < 0
             cond_tk = df_data['GAP_Ticket_$'] < 0
@@ -331,7 +339,7 @@ if file_to_process:
             df_foco_total = df_data[cond_gap & cond_tx & cond_tk].sort_values(by='GAP_Act', ascending=True)
 
             analisis = []
-            analisis.append(f"<b>📌 Diagnóstico Consolidado Compañía:</b><br>El cumplimiento global se sitúa en el <b>{cumpl:.1f}%</b> con un GAP de presupuesto de <b>${gap_act:,.0f}</b>. De {len(df_data)} puntos evaluados, <b>{tiendas_verdes}</b> se ubican en terreno positivo/avance, mientras que <b>{len(df_foco_total)}</b> puntos cumplen con el criterio estricto de <b>Tienda Foco de Atención Crítica</b> (en déficit presupuestal, con caída de tráfico y subconsumo de ticket).")
+            analisis.append(f"<b>📌 Diagnóstico Consolidado Compañía:</b><br>El cumplimiento global se sitúa en el <b>{cumpl:.1f}%</b> con un GAP de presupuesto de <b>${gap_act:,.0f}</b>. Las ventas actuales registran un incremento/variación frente al año anterior de <b>${diff_v_aa:+,.0f} ({var_v_aa:+.1f}% vs AA)</b>. De un total de {len(df_data)} puntos evaluados, <b>{tiendas_verdes}</b> se ubican en terreno positivo/avance, mientras que <b>{len(df_foco_total)}</b> puntos cumplen con el criterio estricto de <b>Tienda Foco de Atención Crítica</b> (déficit presupuestal + caída de tráfico + subconsumo de ticket).")
             
             if gap_tx < 0 and gap_tk < 0:
                 causa = f"<b>🔍 Causa Raíz Comercial:</b> Desviación por Causal Doble. Pérdida de tráfico interanual de <b>{gap_tx:+,.0f} Transacciones ({var_tx:+.1f}% vs AA)</b> combinada con un Ticket Promedio de <b>${tk_act:,.0f}</b> (Faltan ${abs(gap_tk):,.0f} por ticket para la meta del {meta_ticket_pct:.0f}%)."
@@ -353,10 +361,12 @@ if file_to_process:
                 gap_g = df_g['GAP_Act'].sum()
                 cump_g = (v_g / p_g * 100) if p_g > 0 else 0.0
                 
-                # Tiendas Foco de esta regional
+                v_g_aa = df_g['Ventas_AA_Act'].sum()
+                var_v_g_aa = ((v_g - v_g_aa) / v_g_aa * 100) if v_g_aa > 0 else 0.0
+                
                 df_foco_reg = df_g[(df_g['GAP_Act'] < 0) & (df_g['GAP_Tx_AA'] < 0) & (df_g['GAP_Ticket_$'] < 0)].sort_values(by='GAP_Act', ascending=True)
                 
-                txt_ger = f"• <b>Gerencia {str(ger).upper()}:</b> Cumplimiento al <b>{cump_g:.1f}%</b> | GAP Presupuesto: <b>${gap_g:,.0f}</b>."
+                txt_ger = f"• <b>Gerencia {str(ger).upper()}:</b> Cumplimiento al <b>{cump_g:.1f}%</b> | Crecimiento Ventas AA: <b>{var_v_g_aa:+.1f}%</b> | GAP Presupuesto: <b>${gap_g:,.0f}</b>."
                 if not df_foco_reg.empty:
                     txt_ger += f"<br>&nbsp;&nbsp;&nbsp;&nbsp;⚠️ <i>Tiendas Foco Crítico ({len(df_foco_reg)} Puntos):</i>"
                     for _, row_f in df_foco_reg.iterrows():
@@ -367,6 +377,7 @@ if file_to_process:
 
             return "<br><br>".join(analisis)
 
+        # RENDERIZADO INTEGRAL DE KPIS (VENTAS + CRECIMIENTO AA + TRÁFICO AA + TICKET META)
         def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
@@ -376,23 +387,30 @@ if file_to_process:
             gap_ant = df_scope['GAP_Ant'].sum()
             cumpl_gen = (v_act / ppto_act * 100) if ppto_act > 0 else 0.0
 
+            # Ventas AA y Crecimiento
+            v_aa = df_scope['Ventas_AA_Act'].sum()
+            diff_v_aa = v_act - v_aa
+            var_v_aa = ((v_act - v_aa) / v_aa * 100) if v_aa > 0 else 0.0
+
+            # Transacciones AA
             tx_act = df_scope['Tx_Real_Act'].sum()
             tx_aa = df_scope['Tx_AA_Act'].sum()
             gap_tx_aa = tx_act - tx_aa
             var_tx_aa = ((tx_act - tx_aa) / tx_aa * 100) if tx_aa > 0 else 0.0
 
-            v_aa = df_scope['Ventas_AA_Act'].sum()
+            # Ticket Promedio vs Objetivos
             ticket_act = (v_act / tx_act) if tx_act > 0 else 0.0
             ticket_aa = (v_aa / tx_aa) if tx_aa > 0 else 0.0
             ticket_obj = ticket_aa * (1 + (meta_ticket_pct / 100.0))
             gap_ticket_monto = ticket_act - ticket_obj
             var_ticket_aa = ((ticket_act - ticket_aa) / ticket_aa * 100) if ticket_aa > 0 else 0.0
 
-            k1, k2, k3, k4, k5 = st.columns([1, 1, 1, 1.2, 1])
+            # 6 COLUMNAS DE MÉTRICAS
+            k1, k2, k3, k4, k5, k6 = st.columns([1, 1, 1, 1, 1.2, 1])
             with k1:
                 st.markdown(f"""
                 <div class="metric-card card-blue">
-                    <div class="card-title">TIENDAS EN EVALUACIÓN</div>
+                    <div class="card-title">TIENDAS EVALUADAS</div>
                     <div class="card-value" style="color:#2563EB;">{num_tiendas}</div>
                     <div class="card-sub">Ventas: ${v_act:,.0f}</div>
                 </div>
@@ -407,6 +425,15 @@ if file_to_process:
                 </div>
                 """, unsafe_allow_html=True)
             with k3:
+                col_v_c = "#16A34A" if diff_v_aa >= 0 else "#DC2626"
+                st.markdown(f"""
+                <div class="metric-card card-teal">
+                    <div class="card-title">CRECIMIENTO VENTAS (VS AA)</div>
+                    <div class="card-value" style="color:{col_v_c};">${diff_v_aa:+,.0f}</div>
+                    <div class="card-sub" style="color:{col_v_c}; font-weight:bold;">Var: {var_v_aa:+.1f}% vs AA</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with k4:
                 col_tx_c = "#16A34A" if gap_tx_aa >= 0 else "#DC2626"
                 st.markdown(f"""
                 <div class="metric-card card-purple">
@@ -415,7 +442,7 @@ if file_to_process:
                     <div class="card-sub" style="color:{col_tx_c}; font-weight:bold;">Var: {var_tx_aa:+.1f}% vs AA</div>
                 </div>
                 """, unsafe_allow_html=True)
-            with k4:
+            with k5:
                 col_tk_c = "#16A34A" if gap_ticket_monto >= 0 else "#DC2626"
                 st.markdown(f"""
                 <div class="metric-card card-amber">
@@ -424,7 +451,7 @@ if file_to_process:
                     <div class="card-sub" style="color:{col_tk_c}; font-weight:bold;">GAP Meta: ${gap_ticket_monto:+,.0f} ({var_ticket_aa:+.1f}% vs AA)</div>
                 </div>
                 """, unsafe_allow_html=True)
-            with k5:
+            with k6:
                 fig_g = go.Figure(go.Indicator(
                     mode = "gauge+number", value = cumpl_gen,
                     number = {'suffix': "%", 'valueformat': ".1f"},
@@ -495,7 +522,7 @@ if file_to_process:
                         
                         st.markdown("</div>", unsafe_allow_html=True)
 
-        # PESTAÑA 2
+        # PESTAÑA 2: ANÁLISIS DETALLADO
         with tab2:
             st.markdown("### 🎯 FILTROS DE ANÁLISIS DETALLADO")
             f1, f2 = st.columns(2)
@@ -534,7 +561,7 @@ if file_to_process:
                     df_sup_agg.sort_values(by='Cumpl_%', ascending=True),
                     y='Supervisor', x='Cumpl_%', color='Cumpl_%',
                     color_continuous_scale=['#8C0017', '#FEF3C7', '#16A34A'],
-                    orientation='h', title="CUMPLIMIENTO DE PRESUPUESTO (%)", text_auto='.1f%'
+                    orientation='h', title="CUMPLIMIENTO DE PRESUPUESTO (%) POR SUPERVISOR", text_auto='.1f%'
                 )
                 fig_sup.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                 st.plotly_chart(fig_sup, use_container_width=True, key="fig_sup_chart")
@@ -544,29 +571,43 @@ if file_to_process:
                     df_sup_agg.sort_values(by='GAP_Tx_AA', ascending=True),
                     y='Supervisor', x='GAP_Tx_AA', color='GAP_Tx_AA',
                     color_continuous_scale=['#DC2626', '#D97706', '#2563EB'],
-                    orientation='h', title="GAP DE TRANSACCIONES VS AÑO ANTERIOR (Tx)", text_auto=',.0f'
+                    orientation='h', title="GAP DE TRANSACCIONES VS AÑO ANTERIOR (Tx) POR SUPERVISOR", text_auto=',.0f'
                 )
                 fig_tx.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                 st.plotly_chart(fig_tx, use_container_width=True, key="fig_tx_chart")
 
             st.markdown("---")
-            st.markdown("### 🏬 EVOLUCIÓN DEL GAP Y DIAGNÓSTICO POR TIENDA")
+            st.markdown("### 🏬 EVOLUCIÓN DEL GAP Y TRANSACCIONES POR TIENDA")
             
-            fig_tiendas = px.bar(
-                df_tab2.sort_values(by='Evolucion_GAP_$', ascending=True),
-                y='Tienda', x='Evolucion_GAP_$', color='Escenario',
-                color_discrete_map={
-                    'Pasa de Negativo a Positivo 🟢': '#15803D',
-                    'Amplió Superávit 🟢': '#16A34A',
-                    'Mantuvo Superávit 🟢': '#22C55E',
-                    'Recortó Faltante 🟢': '#4ADE80',
-                    'Mantuvo Faltante 🟡': '#D97706',
-                    'Aumentó Faltante 🔴': '#8C0017'
-                },
-                orientation='h', title="VARIACIÓN DE GAP DE PPTO ($) POR TIENDA"
-            )
-            fig_tiendas.update_layout(height=max(400, len(df_tab2) * 22), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-            st.plotly_chart(fig_tiendas, use_container_width=True, key="fig_tiendas_chart")
+            col_bar1, col_bar2 = st.columns(2)
+            
+            with col_bar1:
+                fig_tiendas = px.bar(
+                    df_tab2.sort_values(by='Evolucion_GAP_$', ascending=True),
+                    y='Tienda', x='Evolucion_GAP_$', color='Escenario',
+                    color_discrete_map={
+                        'Pasa de Negativo a Positivo 🟢': '#15803D',
+                        'Amplió Superávit 🟢': '#16A34A',
+                        'Mantuvo Superávit 🟢': '#22C55E',
+                        'Recortó Faltante 🟢': '#4ADE80',
+                        'Mantuvo Faltante 🟡': '#D97706',
+                        'Aumentó Faltante 🔴': '#8C0017'
+                    },
+                    orientation='h', title="VARIACIÓN DE GAP DE PPTO ($) POR TIENDA"
+                )
+                fig_tiendas.update_layout(height=max(420, len(df_tab2) * 22), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                st.plotly_chart(fig_tiendas, use_container_width=True, key="fig_tiendas_chart")
+
+            # NUEVA GRÁFICA HORIZONTAL DE COMPORTAMIENTO DE TRANSACCIONES POR TIENDA
+            with col_bar2:
+                fig_tx_tiendas = px.bar(
+                    df_tab2.sort_values(by='GAP_Tx_AA', ascending=True),
+                    y='Tienda', x='GAP_Tx_AA', color='GAP_Tx_AA',
+                    color_continuous_scale=['#DC2626', '#EAB308', '#2563EB'],
+                    orientation='h', title="VARIACIÓN DE TRANSACCIONES VS AÑO ANTERIOR (Tx) POR TIENDA", text_auto=',.0f'
+                )
+                fig_tx_tiendas.update_layout(height=max(420, len(df_tab2) * 22), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                st.plotly_chart(fig_tx_tiendas, use_container_width=True, key="fig_tx_tiendas_chart")
 
             st.markdown("#### 📋 TABLA DE CAUSA RAÍZ: VENTAS, GAP TRANSACCIONES (AA) Y EVALUACIÓN DE TICKET")
             tabla_causa = df_tab2.sort_values(by='Cumpl_Act_%', ascending=False)[[
