@@ -75,7 +75,7 @@ st.markdown("""
     .card-value { font-size: 18px; font-weight: 800; margin: 2px 0; }
     .card-sub { font-size: 10px; color: #786F66; font-weight: 600; }
 
-    /* CONTENEDOR DE TARJETA INTERACTIVA */
+    /* CONTENEDOR DE TARJETA INTERACTIVA DE ESCENARIOS */
     .esc-container {
         position: relative;
         background-color: #FFFFFF;
@@ -326,7 +326,7 @@ st.sidebar.header("🎯 Metas Comerciales")
 meta_ticket_pct = st.sidebar.number_input("Meta Crecimiento Ticket Promedio (%):", value=10.0, step=0.5, format="%.1f")
 
 # -----------------------------------------------------------------------------
-# POP-UP CON TIENDA Y EVOLUCIÓN EN PESOS DE GAP
+# POP-UP EXCLUSIVO CON TIENDA Y VALOR DE EVOLUCIÓN DE GAP ($)
 # -----------------------------------------------------------------------------
 @st.dialog("🏬 Lista de Tiendas por Escenario", width="medium")
 def mostrar_popup_escenario(nombre_escenario, df_filtrado):
@@ -393,6 +393,7 @@ if file_to_process:
         
         df_merged['Cumpl_Act_%'] = (df_merged['Ventas_Real_Act'] / df_merged['Ppto_Real_Act'].replace(0, 1)) * 100
 
+        # Crecimiento de Ventas Vs Año Anterior (AA)
         df_merged['Diff_Ventas_AA'] = df_merged['Ventas_Real_Act'] - df_merged['Ventas_AA_Act']
         df_merged['Var_Ventas_AA_%'] = ((df_merged['Ventas_Real_Act'] - df_merged['Ventas_AA_Act']) / df_merged['Ventas_AA_Act'].replace(0, 1)) * 100
 
@@ -405,6 +406,7 @@ if file_to_process:
         df_merged['GAP_Ticket_$'] = df_merged['Ticket_Act'] - df_merged['Ticket_Objetivo']
         df_merged['Var_Ticket_AA_%'] = ((df_merged['Ticket_Act'] - df_merged['Ticket_AA']) / df_merged['Ticket_AA'].replace(0, 1)) * 100
 
+        # CLASIFICACIÓN DE ESCENARIOS
         def clasificar_escenario(row):
             g_ant, g_act, diff = row['GAP_Ant'], row['GAP_Act'], row['Evolucion_GAP_$']
             if g_act >= 0:
@@ -482,7 +484,7 @@ if file_to_process:
                 causa = "<b>🔍 Causa Raíz Comercial:</b> Desempeño Operativo Sostenido."
             analisis.append(causa)
 
-            # --- NUEVO BLOQUE: ENFOQUE EN TIENDAS PARETO ---
+            # BLOQUE PARETO
             patron_p = 'SI|S|1|PARETO|TRUE'
             df_pareto = df_data[df_data['Pareto'].astype(str).str.upper().str.contains(patron_p, regex=True, na=False)].copy()
             
@@ -529,7 +531,7 @@ if file_to_process:
 
             return "<br><br>".join(analisis)
 
-        # RENDERIZADO INTEGRAL DE KPIS CON TARJETAS DISEÑADAS Y BOTÓN DE VER DETALLE COMPACTO
+        # RENDERIZADO INTEGRAL DE KPIS CON FLECHAS DE TENDENCIA (VERDE/ROJA)
         def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
@@ -537,6 +539,7 @@ if file_to_process:
             ppto_act = df_scope['Ppto_Real_Act'].sum()
             gap_act = df_scope['GAP_Act'].sum()
             gap_ant = df_scope['GAP_Ant'].sum()
+            evol_gap_monto = gap_act - gap_ant
             cumpl_gen = (v_act / ppto_act * 100) if ppto_act > 0 else 0.0
 
             v_aa = df_scope['Ventas_AA_Act'].sum()
@@ -554,6 +557,15 @@ if file_to_process:
             gap_ticket_monto = ticket_act - ticket_obj
             var_ticket_aa = ((ticket_act - ticket_aa) / ticket_aa * 100) if ticket_aa > 0 else 0.0
 
+            # CÁLCULO DE FLECHAS DE EVOLUCIÓN (VERDE = MEJORÓ / ROJA = EMPEORÓ)
+            # Para el GAP, si la evolución (gap_act - gap_ant) es >= 0 significa que se mejoró la posición presupuestal
+            if evol_gap_monto >= 0:
+                flecha_gap = "🟢 ▲"
+                col_sub_gap = "#16A34A"
+            else:
+                flecha_gap = "🔴 ▼"
+                col_sub_gap = "#DC2626"
+
             k1, k2, k3, k4, k5, k6 = st.columns([1, 1, 1, 1, 1.2, 1])
             with k1:
                 st.markdown(f"""
@@ -569,7 +581,7 @@ if file_to_process:
                 <div class="metric-card {'card-green' if gap_act>=0 else 'card-red'}">
                     <div class="card-title">GAP PPTO ACTUAL</div>
                     <div class="card-value" style="color:{col_g};">${gap_act:,.0f}</div>
-                    <div class="card-sub">GAP Ant: ${gap_ant:,.0f}</div>
+                    <div class="card-sub" style="color:{col_sub_gap}; font-weight:bold;">GAP Ant: ${gap_ant:,.0f} ({flecha_gap})</div>
                 </div>
                 """, unsafe_allow_html=True)
             with k3:
