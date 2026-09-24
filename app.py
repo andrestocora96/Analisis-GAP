@@ -9,15 +9,11 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 🎨 PALETA WARM CORPORATE / BEIGE BEIGE PREMIUM JUAN VALDEZ
+# 🎨 PALETA WARM CORPORATE / BEIGE PREMIUM JUAN VALDEZ
 st.markdown("""
 <style>
-    /* Fondo General Crema / Beige Cálido */
-    .stApp {
-        background-color: #F7F4EF !important;
-    }
+    .stApp { background-color: #F7F4EF !important; }
     
-    /* Header Principal Tinto Ejecutivo */
     .jv-header {
         background: linear-gradient(135deg, #58000E 0%, #8C0017 100%);
         padding: 22px;
@@ -30,7 +26,6 @@ st.markdown("""
     .jv-header h1 { margin: 0; font-size: 26px; font-weight: 800; color: #FFFFFF; letter-spacing: 0.5px; }
     .jv-header p { margin: 6px 0 0 0; font-size: 13px; color: #F7EBE8; opacity: 0.95; }
 
-    /* Tarjetas de Filtro Switch */
     .filter-card-red {
         background-color: #FCE8E8;
         border: 1px solid #F87171;
@@ -52,7 +47,6 @@ st.markdown("""
         background-color: #8C0017 !important;
     }
 
-    /* Tarjetas KPI sobre Fondo Beige */
     .metric-card {
         background-color: #FFFFFF;
         border-radius: 12px;
@@ -69,17 +63,27 @@ st.markdown("""
     .card-purple { border-left: 5px solid #7C3AED; }
     .card-amber { border-left: 5px solid #B45309; }
     
-    .card-title {
-        font-size: 10px;
-        font-weight: 800;
-        color: #524B42;
-        text-transform: uppercase;
-        margin-bottom: 4px;
-    }
+    .card-title { font-size: 10px; font-weight: 800; color: #524B42; text-transform: uppercase; margin-bottom: 4px; }
     .card-value { font-size: 20px; font-weight: 800; margin: 2px 0; }
     .card-sub { font-size: 10px; color: #786F66; font-weight: 600; }
 
-    /* Cajas para Gerentes con Sombra Suave Warm */
+    /* Caja de Resumen IA */
+    .ai-box {
+        background-color: #FFFFFF;
+        border: 1px solid #D97706;
+        border-left: 6px solid #B45309;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 14px rgba(180, 83, 9, 0.1);
+    }
+    .ai-title {
+        font-size: 16px;
+        font-weight: 800;
+        color: #78350F;
+        margin-bottom: 10px;
+    }
+
     .gerente-box {
         background-color: #FFFFFF;
         border-radius: 14px;
@@ -89,29 +93,17 @@ st.markdown("""
         box-shadow: 0 4px 14px rgba(80, 70, 60, 0.06);
     }
     .gerente-title {
-        font-size: 15px;
-        font-weight: 800;
-        color: #6B0011;
-        border-bottom: 2px solid #F4EFE6;
-        padding-bottom: 8px;
-        margin-bottom: 14px;
+        font-size: 15px; font-weight: 800; color: #6B0011;
+        border-bottom: 2px solid #F4EFE6; padding-bottom: 8px; margin-bottom: 14px;
     }
     
-    /* Estilo de Pestañas Elegantes */
     .stTabs [data-baseweb="tab-list"] { gap: 10px; }
     .stTabs [data-baseweb="tab"] {
-        height: 44px;
-        background-color: #EFE8DE;
-        border-radius: 8px;
-        padding: 0px 22px;
-        font-weight: 700;
-        color: #524B42;
-        border: 1px solid #E5DCCE;
+        height: 44px; background-color: #EFE8DE; border-radius: 8px;
+        padding: 0px 22px; font-weight: 700; color: #524B42; border: 1px solid #E5DCCE;
     }
     .stTabs [aria-selected="true"] {
-        background-color: #6B0011 !important;
-        color: #FFFFFF !important;
-        border-color: #6B0011 !important;
+        background-color: #6B0011 !important; color: #FFFFFF !important; border-color: #6B0011 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -180,7 +172,6 @@ def cargar_datos(file):
 st.sidebar.header("📁 Configuración de Datos")
 uploaded_file = st.sidebar.file_uploader("Cargar ANALISIS GAP.xlsx", type=['xlsx'])
 
-# PARÁMETRO CONFIGURABLE DE META TICKET PROMEDIO
 st.sidebar.markdown("---")
 st.sidebar.header("🎯 Metas Comerciales")
 meta_ticket_pct = st.sidebar.number_input("Meta Crecimiento Ticket Promedio (%):", value=10.0, step=0.5, format="%.1f")
@@ -225,17 +216,14 @@ if uploaded_file:
         for col in ['Ventas_Real_Act', 'Ppto_Real_Act', 'Ventas_Real_Ant', 'Ppto_Real_Ant', 'Ventas_AA_Act', 'Tx_Real_Act', 'Tx_AA_Act']:
             df_merged[col] = df_merged[col].fillna(0.0)
             
-        # CÁLCULOS CLAVE
         df_merged['GAP_Ant'] = df_merged['Ventas_Real_Ant'] - df_merged['Ppto_Real_Ant']
         df_merged['GAP_Act'] = df_merged['Ventas_Real_Act'] - df_merged['Ppto_Real_Act']
         df_merged['Evolucion_GAP_$'] = df_merged['GAP_Act'] - df_merged['GAP_Ant']
         df_merged['Cumpl_Act_%'] = (df_merged['Ventas_Real_Act'] / df_merged['Ppto_Real_Act'].replace(0, 1)) * 100
 
-        # CÁLCULOS DE TRANSACCIONES VS AÑO ANTERIOR (AA)
         df_merged['GAP_Tx_AA'] = df_merged['Tx_Real_Act'] - df_merged['Tx_AA_Act']
         df_merged['Var_Tx_AA_%'] = ((df_merged['Tx_Real_Act'] - df_merged['Tx_AA_Act']) / df_merged['Tx_AA_Act'].replace(0, 1)) * 100
 
-        # CÁLCULOS DE TICKET PROMEDIO Y EVALUACIÓN FRENTE A META CONFIGURABLE
         df_merged['Ticket_Act'] = df_merged['Ventas_Real_Act'] / df_merged['Tx_Real_Act'].replace(0, 1)
         df_merged['Ticket_AA'] = df_merged['Ventas_AA_Act'] / df_merged['Tx_AA_Act'].replace(0, 1)
         df_merged['Ticket_Objetivo'] = df_merged['Ticket_AA'] * (1 + (meta_ticket_pct / 100.0))
@@ -268,6 +256,52 @@ if uploaded_file:
         patron_valid = 'SI|S|1|PARETO|TRUE|COMPARABLE'
         if solo_pareto: df_base = df_base[df_base['Pareto'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
         if solo_comparable: df_base = df_base[df_base['Comparable_Val'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
+
+        # FUNCION GENERADORA DE DIAGNÓSTICO IA
+        def generar_analisis_ia(df_data):
+            v_act = df_data['Ventas_Real_Act'].sum()
+            ppto_act = df_data['Ppto_Real_Act'].sum()
+            gap_act = df_data['GAP_Act'].sum()
+            cumpl = (v_act / ppto_act * 100) if ppto_act > 0 else 0.0
+            
+            tx_act = df_data['Tx_Real_Act'].sum()
+            tx_aa = df_scope_tx = df_data['Tx_AA_Act'].sum()
+            gap_tx = tx_act - tx_aa
+            var_tx = ((tx_act - tx_aa) / tx_aa * 100) if tx_aa > 0 else 0.0
+            
+            tk_act = (v_act / tx_act) if tx_act > 0 else 0.0
+            v_aa = df_data['Ventas_AA_Act'].sum()
+            tk_aa = (v_aa / tx_aa) if tx_aa > 0 else 0.0
+            tk_obj = tk_aa * (1 + (meta_ticket_pct / 100.0))
+            gap_tk = tk_act - tk_obj
+            
+            conteo = df_data['Escenario'].value_counts()
+            tiendas_rojas = conteo.get('Aumentó Faltante 🔴', 0)
+            tiendas_verdes = conteo.get('Pasa de Negativo a Positivo 🟢', 0) + conteo.get('Amplió Superávit 🟢', 0) + conteo.get('Recortó Faltante 🟢', 0)
+
+            # Redacción Dinámica
+            analisis = []
+            analisis.append(f"<b>Diagnóstico General:</b> El cumplimiento consolidado se ubica en el <b>{cumpl:.1f}%</b> con un GAP presupuestal de <b>${gap_act:,.0f}</b>. De {len(df_data)} tiendas evaluadas, <b>{tiendas_verdes}</b> muestran una evolución positiva de GAP, mientras que <b>{tiendas_rojas}</b> tiendas están ampliando su déficit presupuestal.")
+            
+            # Causa Raíz
+            if gap_tx < 0 and gap_tk < 0:
+                causa = f"<b>Causa Raíz Principal:</b> Alerta Comercial Doble. Existe una caída en el tráfico de clientes de <b>{gap_tx:+,.0f} Transacciones ({var_tx:+.1f}% vs AA)</b> combinada con un Ticket Promedio de <b>${tk_act:,.0f}</b> que no alcanza la meta del {meta_ticket_pct:.0f}% (Faltan ${abs(gap_tk):,.0f} por ticket)."
+            elif gap_tx < 0:
+                causa = f"<b>Causa Raíz Principal:</b> Pérdida de Tráfico. La brecha presupuestal está impulsada principalmente por una contracción de <b>{gap_tx:+,.0f} Transacciones ({var_tx:+.1f}% vs AA)</b>. El Ticket Promedio responde bien situándose en ${tk_act:,.0f}."
+            elif gap_tk < 0:
+                causa = f"<b>Causa Raíz Principal:</b> Subconsumo / Mezcla de Producto. El tráfico de clientes crece (<b>{gap_tx:+,.0f} Tx</b>), pero el Ticket Promedio está <b>${abs(gap_tk):,.0f}</b> por debajo de la meta del {meta_ticket_pct:.0f}%."
+            else:
+                causa = "<b>Causa Raíz Principal:</b> Excelente Desempeño Operativo. Se registran incrementos positivos tanto en tráfico de clientes como en ticket promedio frente al año anterior."
+            analisis.append(causa)
+
+            # Recomendación Táctica
+            if gap_tx < 0:
+                rec = "<b>Recomendación Comercial:</b> Activar estrategias de atracción de tráfico en horas valle y alianzas locales de visibilidad."
+            else:
+                rec = "<b>Recomendación Comercial:</b> Fomentar sugerencia de combos y adicionales en barra (Cross-selling / Upselling) para elevar el valor del ticket."
+            analisis.append(rec)
+
+            return "<br><br>".join(analisis)
 
         # RENDERIZADO INTEGRAL DE KPIS
         def render_kpi_block(df_scope, key_suffix="main"):
@@ -361,9 +395,25 @@ if uploaded_file:
 
         tab1, tab2 = st.tabs(["📊 Informe Gerencial GAP", "🔍 Análisis por Gerencia"])
 
-        # PESTAÑA 1: INFORME GERENCIAL
+        # PESTAÑA 1
         with tab1:
             st.markdown("### 🏢 RESUMEN GENERAL DE LA COMPAÑÍA")
+            
+            # Botón de Generación de Diagnóstico IA
+            col_ai_btn, _ = st.columns([1, 2])
+            with col_ai_btn:
+                btn_ia = st.button("🤖 Generar Diagnóstico con IA", type="primary", use_container_width=True)
+
+            if btn_ia:
+                with st.spinner("Analizando desviaciones comerciales y comportamiento de tráfico..."):
+                    resumen_texto = generar_analisis_ia(df_base)
+                    st.markdown(f"""
+                    <div class="ai-box">
+                        <div class="ai-title">🧠 ANÁLISIS GERENCIAL DE IA</div>
+                        <div style="color: #451A03; font-size: 13px; line-height: 1.6;">{resumen_texto}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
             render_kpi_block(df_base, key_suffix="global")
             
             st.markdown("---")
@@ -378,7 +428,7 @@ if uploaded_file:
                         render_kpi_block(df_g, key_suffix=f"ger_{idx}")
                         st.markdown("</div>", unsafe_allow_html=True)
 
-        # PESTAÑA 2: ANÁLISIS DETALLADO
+        # PESTAÑA 2
         with tab2:
             st.markdown("### 🎯 FILTROS DE ANÁLISIS DETALLADO")
             f1, f2 = st.columns(2)
@@ -451,7 +501,6 @@ if uploaded_file:
             fig_tiendas.update_layout(height=max(400, len(df_tab2) * 22), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
             st.plotly_chart(fig_tiendas, use_container_width=True, key="fig_tiendas_chart")
 
-            # TABLA DE CAUSA RAÍZ INTERANUAL
             st.markdown("#### 📋 TABLA DE CAUSA RAÍZ: VENTAS, GAP TRANSACCIONES (AA) Y EVALUACIÓN DE TICKET")
             tabla_causa = df_tab2.sort_values(by='Cumpl_Act_%', ascending=False)[[
                 'Tienda', 'Gerente', 'Supervisor', 'Cumpl_Act_%', 'GAP_Act', 'Evolucion_GAP_$', 
