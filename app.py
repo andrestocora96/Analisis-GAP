@@ -144,6 +144,19 @@ st.markdown("""
         transform: translateY(-1px) !important;
     }
 
+    /* Subtítulos de Secciones KPI */
+    .section-kpi-title {
+        font-size: 11px;
+        font-weight: 800;
+        color: #64748B;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-top: 10px;
+        margin-bottom: 6px;
+        border-bottom: 1px solid #E2E8F0;
+        padding-bottom: 3px;
+    }
+
     /* Titulo Gris Discreto para Sección GAP Escenarios */
     .gap-section-title {
         font-size: 11px;
@@ -151,7 +164,7 @@ st.markdown("""
         color: #94A3B8;
         text-transform: uppercase;
         letter-spacing: 0.8px;
-        margin-top: 14px;
+        margin-top: 16px;
         margin-bottom: 8px;
     }
 
@@ -388,7 +401,7 @@ if file_to_process:
         elif 'Pareto_Act' in df_merged.columns: df_merged['Pareto'] = df_merged['Pareto_Act']
         elif 'Pareto' not in df_merged.columns: df_merged['Pareto'] = 'NO'
 
-        # AGREGAR ESTRELLA ⭐ A TODAS LAS TIENDAS PARETO DE FORMA GLOBAL
+        # AGREGAR ESTRELLA ⭐ A TODAS LAS TIENDAS PARETO
         patron_p = 'SI|S|1|PARETO|TRUE'
         df_merged['Tienda'] = df_merged.apply(
             lambda r: f"{r['Tienda']} ⭐" if (str(r['Pareto']).upper().strip() in ['SI', 'S', '1', 'PARETO', 'TRUE']) and not str(r['Tienda']).endswith('⭐') else r['Tienda'],
@@ -412,15 +425,17 @@ if file_to_process:
         df_merged['Diff_Ventas_AA'] = df_merged['Ventas_Real_Act'] - df_merged['Ventas_AA_Act']
         df_merged['Var_Ventas_AA_%'] = ((df_merged['Ventas_Real_Act'] - df_merged['Ventas_AA_Act']) / df_merged['Ventas_AA_Act'].replace(0, 1)) * 100
 
-        # CÁLCULOS DE GAP DE TRANSACCIONES (ACTUAL Y ANTERIOR)
+        # CÁLCULOS DE GAP DE TRANSACCIONES Y TICKET
         df_merged['GAP_Tx_AA_Act'] = df_merged['Tx_Real_Act'] - df_merged['Tx_AA_Act']
         df_merged['GAP_Tx_AA_Ant'] = df_merged['Tx_Real_Ant'] - df_merged['Tx_AA_Ant']
         df_merged['Evolucion_GAP_Tx'] = df_merged['GAP_Tx_AA_Act'] - df_merged['GAP_Tx_AA_Ant']
-        
         df_merged['GAP_Tx_AA'] = df_merged['GAP_Tx_AA_Act']
         df_merged['Var_Tx_AA_%'] = ((df_merged['Tx_Real_Act'] - df_merged['Tx_AA_Act']) / df_merged['Tx_AA_Act'].replace(0, 1)) * 100
 
         df_merged['Ticket_Act'] = df_merged['Ventas_Real_Act'] / df_merged['Tx_Real_Act'].replace(0, 1)
+        df_merged['Ticket_Ant'] = df_merged['Ventas_Real_Ant'] / df_merged['Tx_Real_Ant'].replace(0, 1)
+        df_merged['Evolucion_Ticket_$'] = df_merged['Ticket_Act'] - df_merged['Ticket_Ant']
+
         df_merged['Ticket_AA'] = df_merged['Ventas_AA_Act'] / df_merged['Tx_AA_Act'].replace(0, 1)
         df_merged['Ticket_Objetivo'] = df_merged['Ticket_AA'] * (1 + (meta_ticket_pct / 100.0))
         df_merged['GAP_Ticket_$'] = df_merged['Ticket_Act'] - df_merged['Ticket_Objetivo']
@@ -550,7 +565,7 @@ if file_to_process:
 
             return "<br><br>".join(analisis)
 
-        # RENDERIZADO DE KPIS CON COMPARATIVA COMPLETA DE GAP PPTO Y GAP TRANSACCIONES
+        # RENDERIZADO REESTRUCTURADO DE KPIS EN DOS NIVELES
         def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
@@ -573,25 +588,26 @@ if file_to_process:
             var_tx_aa = ((tx_act - tx_aa) / tx_aa * 100) if tx_aa > 0 else 0.0
 
             ticket_act = (v_act / tx_act) if tx_act > 0 else 0.0
+            v_ant_total = df_scope['Ventas_Real_Ant'].sum()
+            tx_ant_total = df_scope['Tx_Real_Ant'].sum()
+            ticket_ant = (v_ant_total / tx_ant_total) if tx_ant_total > 0 else 0.0
+            evol_ticket_monto = ticket_act - ticket_ant
+
             ticket_aa = (v_aa / tx_aa) if tx_aa > 0 else 0.0
             ticket_obj = ticket_aa * (1 + (meta_ticket_pct / 100.0))
             gap_ticket_monto = ticket_act - ticket_obj
             var_ticket_aa = ((ticket_act - ticket_aa) / ticket_aa * 100) if ticket_aa > 0 else 0.0
 
-            # FLECHA DE TENDENCIA EN VALOR DE GAP PPTO (VERDE SI MEJORÓ)
-            if evol_gap_monto >= 0:
-                flecha_monto = ' <span style="color:#16A34A; font-weight:800;">▲</span>'
-            else:
-                flecha_monto = ' <span style="color:#DC2626; font-weight:800;">▼</span>'
+            # SIMBOLOS DE TENDENCIA DERECHA
+            flecha_monto = ' <span style="color:#16A34A; font-weight:800;">▲</span>' if evol_gap_monto >= 0 else ' <span style="color:#DC2626; font-weight:800;">▼</span>'
+            flecha_tx = ' <span style="color:#16A34A; font-weight:800;">▲</span>' if evol_tx_monto >= 0 else ' <span style="color:#DC2626; font-weight:800;">▼</span>'
+            flecha_tk = ' <span style="color:#16A34A; font-weight:800;">▲</span>' if evol_ticket_monto >= 0 else ' <span style="color:#DC2626; font-weight:800;">▼</span>'
 
-            # FLECHA DE TENDENCIA EN VALOR DE GAP TRANSACCIONES (VERDE SI AUMENTÓ / RECORTÓ PÉRDIDA)
-            if evol_tx_monto >= 0:
-                flecha_tx = ' <span style="color:#16A34A; font-weight:800;">▲</span>'
-            else:
-                flecha_tx = ' <span style="color:#DC2626; font-weight:800;">▼</span>'
-
-            k1, k2, k3, k4, k5, k6 = st.columns([1, 1, 1, 1, 1.2, 1])
-            with k1:
+            # --- FILA 1: COMERCIAL Y CUMPLIMIENTO ---
+            st.markdown('<div class="section-kpi-title">📈 DESEMPEÑO COMERCIAL & VENTAS</div>', unsafe_allow_html=True)
+            r1_1, r1_2, r1_3, r1_4 = st.columns([1, 1.2, 1.2, 1])
+            
+            with r1_1:
                 st.markdown(f"""
                 <div class="metric-card card-blue">
                     <div class="card-title">TIENDAS EVALUADAS</div>
@@ -599,16 +615,7 @@ if file_to_process:
                     <div class="card-sub">Ventas: ${v_act:,.0f}</div>
                 </div>
                 """, unsafe_allow_html=True)
-            with k2:
-                col_g = "#16A34A" if gap_act >= 0 else "#DC2626"
-                st.markdown(f"""
-                <div class="metric-card {'card-green' if gap_act>=0 else 'card-red'}">
-                    <div class="card-title">GAP PPTO ACTUAL</div>
-                    <div class="card-value" style="color:{col_g};">${gap_act:,.0f}{flecha_monto}</div>
-                    <div class="card-sub">GAP Ant: ${gap_ant:,.0f}</div>
-                </div>
-                """, unsafe_allow_html=True)
-            with k3:
+            with r1_2:
                 col_v_c = "#16A34A" if diff_v_aa >= 0 else "#DC2626"
                 st.markdown(f"""
                 <div class="metric-card card-teal">
@@ -617,16 +624,7 @@ if file_to_process:
                     <div class="card-sub" style="color:{col_v_c}; font-weight:bold;">Var: {var_v_aa:+.1f}% vs AA</div>
                 </div>
                 """, unsafe_allow_html=True)
-            with k4:
-                col_tx_c = "#16A34A" if gap_tx_act >= 0 else "#DC2626"
-                st.markdown(f"""
-                <div class="metric-card card-purple">
-                    <div class="card-title">GAP TRANSACCIONES (VS AA)</div>
-                    <div class="card-value" style="color:{col_tx_c};">{gap_tx_act:+,.0f} Tx{flecha_tx}</div>
-                    <div class="card-sub">GAP Tx Ant: {gap_tx_ant:+,.0f} Tx</div>
-                </div>
-                """, unsafe_allow_html=True)
-            with k5:
+            with r1_3:
                 col_tk_c = "#16A34A" if gap_ticket_monto >= 0 else "#DC2626"
                 st.markdown(f"""
                 <div class="metric-card card-amber">
@@ -635,7 +633,7 @@ if file_to_process:
                     <div class="card-sub" style="color:{col_tk_c}; font-weight:bold;">GAP Meta: ${gap_ticket_monto:+,.0f} ({var_ticket_aa:+.1f}% vs AA)</div>
                 </div>
                 """, unsafe_allow_html=True)
-            with k6:
+            with r1_4:
                 fig_g = go.Figure(go.Indicator(
                     mode = "gauge+number", value = cumpl_gen,
                     number = {'suffix': "%", 'valueformat': ".1f"},
@@ -654,6 +652,38 @@ if file_to_process:
                     paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)'
                 )
                 st.plotly_chart(fig_g, use_container_width=True, key=f"gauge_{key_suffix}")
+
+            # --- FILA 2: ANÁLISIS DE GAP & EVOLUCIÓN INTERSEMANAL ---
+            st.markdown('<div class="section-kpi-title">📊 ANÁLISIS DE GAP Y EVOLUCIÓN INTERSEMANAL (CUELGUE ANT. VS NUEVO)</div>', unsafe_allow_html=True)
+            r2_1, r2_2, r2_3 = st.columns(3)
+            
+            with r2_1:
+                col_g = "#16A34A" if gap_act >= 0 else "#DC2626"
+                st.markdown(f"""
+                <div class="metric-card {'card-green' if gap_act>=0 else 'card-red'}">
+                    <div class="card-title">GAP PPTO ACTUAL</div>
+                    <div class="card-value" style="color:{col_g};">${gap_act:,.0f}{flecha_monto}</div>
+                    <div class="card-sub">GAP Ant: ${gap_ant:,.0f} | Evol: ${evol_gap_monto:+,.0f}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with r2_2:
+                col_tx_c = "#16A34A" if gap_tx_act >= 0 else "#DC2626"
+                st.markdown(f"""
+                <div class="metric-card card-purple">
+                    <div class="card-title">GAP TRANSACCIONES (VS AA)</div>
+                    <div class="card-value" style="color:{col_tx_c};">{gap_tx_act:+,.0f} Tx{flecha_tx}</div>
+                    <div class="card-sub">GAP Tx Ant: {gap_tx_ant:+,.0f} Tx | Evol: {evol_tx_monto:+,.0f} Tx</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with r2_3:
+                col_tk_ev = "#16A34A" if evol_ticket_monto >= 0 else "#DC2626"
+                st.markdown(f"""
+                <div class="metric-card card-yellow">
+                    <div class="card-title">EVOLUCIÓN TICKET PROMEDIO (SEMANAL)</div>
+                    <div class="card-value" style="color:{col_tk_ev};">${ticket_act:,.0f}{flecha_tk}</div>
+                    <div class="card-sub">Ticket Ant: ${ticket_ant:,.0f} | Evol: ${evol_ticket_monto:+,.0f}</div>
+                </div>
+                """, unsafe_allow_html=True)
 
             # SECCIÓN GAP CON SUMATORIA DE MONTO Y BOTÓN
             st.markdown('<div class="gap-section-title">GAP & DISTRIBUCIÓN DE TIENDAS POR ESCENARIO</div>', unsafe_allow_html=True)
