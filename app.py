@@ -12,8 +12,12 @@ st.set_page_config(
 # 🎨 PALETA WARM CORPORATE / BEIGE PREMIUM JUAN VALDEZ
 st.markdown("""
 <style>
-    .stApp { background-color: #F7F4EF !important; }
+    /* Fondo General Crema / Beige Cálido */
+    .stApp {
+        background-color: #F7F4EF !important;
+    }
     
+    /* Header Principal Tinto Ejecutivo */
     .jv-header {
         background: linear-gradient(135deg, #58000E 0%, #8C0017 100%);
         padding: 22px;
@@ -26,6 +30,7 @@ st.markdown("""
     .jv-header h1 { margin: 0; font-size: 26px; font-weight: 800; color: #FFFFFF; letter-spacing: 0.5px; }
     .jv-header p { margin: 6px 0 0 0; font-size: 13px; color: #F7EBE8; opacity: 0.95; }
 
+    /* Tarjetas de Filtro Switch */
     .filter-card-red {
         background-color: #FCE8E8;
         border: 1px solid #F87171;
@@ -47,6 +52,7 @@ st.markdown("""
         background-color: #8C0017 !important;
     }
 
+    /* Tarjetas KPI sobre Fondo Beige */
     .metric-card {
         background-color: #FFFFFF;
         border-radius: 12px;
@@ -77,33 +83,44 @@ st.markdown("""
         margin-bottom: 25px;
         box-shadow: 0 4px 14px rgba(180, 83, 9, 0.1);
     }
-    .ai-title {
-        font-size: 16px;
-        font-weight: 800;
-        color: #78350F;
-        margin-bottom: 10px;
-    }
+    .ai-title { font-size: 16px; font-weight: 800; color: #78350F; margin-bottom: 10px; }
 
+    /* Cajas para Gerentes con Encabezado Oscuro Diferencial */
     .gerente-box {
         background-color: #FFFFFF;
         border-radius: 14px;
-        border: 1px solid #EBE3D5;
-        padding: 20px;
-        margin-bottom: 22px;
-        box-shadow: 0 4px 14px rgba(80, 70, 60, 0.06);
+        border: 1px solid #D1C7B7;
+        padding: 0px 20px 20px 20px;
+        margin-bottom: 25px;
+        box-shadow: 0 6px 16px rgba(80, 70, 60, 0.08);
+        overflow: hidden;
     }
-    .gerente-title {
-        font-size: 15px; font-weight: 800; color: #6B0011;
-        border-bottom: 2px solid #F4EFE6; padding-bottom: 8px; margin-bottom: 14px;
+    .gerente-title-banner {
+        background: linear-gradient(90deg, #58000E 0%, #7A0016 100%);
+        color: #FFFFFF;
+        font-size: 15px;
+        font-weight: 800;
+        padding: 12px 20px;
+        margin: 0 -20px 18px -20px;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     }
     
+    /* Estilo de Pestañas Elegantes */
     .stTabs [data-baseweb="tab-list"] { gap: 10px; }
     .stTabs [data-baseweb="tab"] {
-        height: 44px; background-color: #EFE8DE; border-radius: 8px;
-        padding: 0px 22px; font-weight: 700; color: #524B42; border: 1px solid #E5DCCE;
+        height: 44px;
+        background-color: #EFE8DE;
+        border-radius: 8px;
+        padding: 0px 22px;
+        font-weight: 700;
+        color: #524B42;
+        border: 1px solid #E5DCCE;
     }
     .stTabs [aria-selected="true"] {
-        background-color: #6B0011 !important; color: #FFFFFF !important; border-color: #6B0011 !important;
+        background-color: #6B0011 !important;
+        color: #FFFFFF !important;
+        border-color: #6B0011 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -257,7 +274,6 @@ if uploaded_file:
         if solo_pareto: df_base = df_base[df_base['Pareto'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
         if solo_comparable: df_base = df_base[df_base['Comparable_Val'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
 
-        # FUNCION GENERADORA DE DIAGNÓSTICO IA
         def generar_analisis_ia(df_data):
             v_act = df_data['Ventas_Real_Act'].sum()
             ppto_act = df_data['Ppto_Real_Act'].sum()
@@ -265,7 +281,7 @@ if uploaded_file:
             cumpl = (v_act / ppto_act * 100) if ppto_act > 0 else 0.0
             
             tx_act = df_data['Tx_Real_Act'].sum()
-            tx_aa = df_scope_tx = df_data['Tx_AA_Act'].sum()
+            tx_aa = df_data['Tx_AA_Act'].sum()
             gap_tx = tx_act - tx_aa
             var_tx = ((tx_act - tx_aa) / tx_aa * 100) if tx_aa > 0 else 0.0
             
@@ -279,11 +295,9 @@ if uploaded_file:
             tiendas_rojas = conteo.get('Aumentó Faltante 🔴', 0)
             tiendas_verdes = conteo.get('Pasa de Negativo a Positivo 🟢', 0) + conteo.get('Amplió Superávit 🟢', 0) + conteo.get('Recortó Faltante 🟢', 0)
 
-            # Redacción Dinámica
             analisis = []
             analisis.append(f"<b>Diagnóstico General:</b> El cumplimiento consolidado se ubica en el <b>{cumpl:.1f}%</b> con un GAP presupuestal de <b>${gap_act:,.0f}</b>. De {len(df_data)} tiendas evaluadas, <b>{tiendas_verdes}</b> muestran una evolución positiva de GAP, mientras que <b>{tiendas_rojas}</b> tiendas están ampliando su déficit presupuestal.")
             
-            # Causa Raíz
             if gap_tx < 0 and gap_tk < 0:
                 causa = f"<b>Causa Raíz Principal:</b> Alerta Comercial Doble. Existe una caída en el tráfico de clientes de <b>{gap_tx:+,.0f} Transacciones ({var_tx:+.1f}% vs AA)</b> combinada con un Ticket Promedio de <b>${tk_act:,.0f}</b> que no alcanza la meta del {meta_ticket_pct:.0f}% (Faltan ${abs(gap_tk):,.0f} por ticket)."
             elif gap_tx < 0:
@@ -294,7 +308,6 @@ if uploaded_file:
                 causa = "<b>Causa Raíz Principal:</b> Excelente Desempeño Operativo. Se registran incrementos positivos tanto en tráfico de clientes como en ticket promedio frente al año anterior."
             analisis.append(causa)
 
-            # Recomendación Táctica
             if gap_tx < 0:
                 rec = "<b>Recomendación Comercial:</b> Activar estrategias de atracción de tráfico en horas valle y alianzas locales de visibilidad."
             else:
@@ -399,7 +412,6 @@ if uploaded_file:
         with tab1:
             st.markdown("### 🏢 RESUMEN GENERAL DE LA COMPAÑÍA")
             
-            # Botón de Generación de Diagnóstico IA
             col_ai_btn, _ = st.columns([1, 2])
             with col_ai_btn:
                 btn_ia = st.button("🤖 Generar Diagnóstico con IA", type="primary", use_container_width=True)
@@ -424,8 +436,13 @@ if uploaded_file:
                 df_g = df_base[df_base['Gerente'] == ger]
                 if df_g['Ventas_Real_Act'].sum() > 0 or df_g['Ppto_Real_Act'].sum() > 0:
                     with st.container():
-                        st.markdown(f"""<div class="gerente-box"><div class="gerente-title">📍 GERENCIA REGIONAL: {str(ger).upper()}</div>""", unsafe_allow_html=True)
+                        st.markdown(f"""
+                        <div class="gerente-box">
+                            <div class="gerente-title-banner">📍 GERENCIA REGIONAL: {str(ger).upper()}</div>
+                        """, unsafe_allow_html=True)
+                        
                         render_kpi_block(df_g, key_suffix=f"ger_{idx}")
+                        
                         st.markdown("</div>", unsafe_allow_html=True)
 
         # PESTAÑA 2
