@@ -73,7 +73,7 @@ st.markdown("""
     .card-value { font-size: 20px; font-weight: 800; margin: 2px 0; }
     .card-sub { font-size: 10px; color: #786F66; font-weight: 600; }
 
-    /* Caja de Resumen IA */
+    /* Caja de Resumen Ejecutivo */
     .ai-box {
         background-color: #FFFFFF;
         border: 1px solid #D97706;
@@ -83,7 +83,7 @@ st.markdown("""
         margin-bottom: 25px;
         box-shadow: 0 4px 14px rgba(180, 83, 9, 0.1);
     }
-    .ai-title { font-size: 16px; font-weight: 800; color: #78350F; margin-bottom: 10px; }
+    .ai-title { font-size: 16px; font-weight: 800; color: #78350F; margin-bottom: 12px; border-bottom: 1px solid #FDE68A; padding-bottom: 6px; }
 
     /* Cajas para Gerentes con Encabezado Oscuro Diferencial */
     .gerente-box {
@@ -274,7 +274,8 @@ if uploaded_file:
         if solo_pareto: df_base = df_base[df_base['Pareto'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
         if solo_comparable: df_base = df_base[df_base['Comparable_Val'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
 
-        def generar_analisis_ia(df_data):
+        # GENERADOR DE DIAGNÓSTICO GERENCIAL DETALLADO POR REGIONAL Y TIENDAS
+        def generar_diagnostico_gerencial(df_data):
             v_act = df_data['Ventas_Real_Act'].sum()
             ppto_act = df_data['Ppto_Real_Act'].sum()
             gap_act = df_data['GAP_Act'].sum()
@@ -293,26 +294,50 @@ if uploaded_file:
             
             conteo = df_data['Escenario'].value_counts()
             tiendas_rojas = conteo.get('Aumentó Faltante 🔴', 0)
+            tiendas_amarillas = conteo.get('Mantuvo Faltante 🟡', 0)
             tiendas_verdes = conteo.get('Pasa de Negativo a Positivo 🟢', 0) + conteo.get('Amplió Superávit 🟢', 0) + conteo.get('Recortó Faltante 🟢', 0)
 
             analisis = []
-            analisis.append(f"<b>Diagnóstico General:</b> El cumplimiento consolidado se ubica en el <b>{cumpl:.1f}%</b> con un GAP presupuestal de <b>${gap_act:,.0f}</b>. De {len(df_data)} tiendas evaluadas, <b>{tiendas_verdes}</b> muestran una evolución positiva de GAP, mientras que <b>{tiendas_rojas}</b> tiendas están ampliando su déficit presupuestal.")
             
+            # 1. Diagnóstico Consolidado
+            analisis.append(f"<b>📌 Diagnóstico Consolidado Compañía:</b><br>El cumplimiento global se sitúa en el <b>{cumpl:.1f}%</b> con un GAP de presupuesto de <b>${gap_act:,.0f}</b>. De un total de {len(df_data)} puntos evaluados, <b>{tiendas_verdes}</b> muestran una evolución positiva de GAP, mientras que <b>{tiendas_rojas + tiendas_amarillas}</b> puntos requieren intervención estratégica (<b>{tiendas_rojas}</b> en 'Aumentó Faltante' y <b>{tiendas_amarillas}</b> en 'Mantuvo Faltante').")
+            
+            # 2. Causa Raíz
             if gap_tx < 0 and gap_tk < 0:
-                causa = f"<b>Causa Raíz Principal:</b> Alerta Comercial Doble. Existe una caída en el tráfico de clientes de <b>{gap_tx:+,.0f} Transacciones ({var_tx:+.1f}% vs AA)</b> combinada con un Ticket Promedio de <b>${tk_act:,.0f}</b> que no alcanza la meta del {meta_ticket_pct:.0f}% (Faltan ${abs(gap_tk):,.0f} por ticket)."
+                causa = f"<b>🔍 Causa Raíz Comercial:</b> Desviación por Causal Doble. Se identifica una pérdida de tráfico interanual de <b>{gap_tx:+,.0f} Transacciones ({var_tx:+.1f}% vs AA)</b> sumada a un Ticket Promedio de <b>${tk_act:,.0f}</b> que no alcanza la meta propuesta del {meta_ticket_pct:.0f}% (Faltan ${abs(gap_tk):,.0f} por transacción)."
             elif gap_tx < 0:
-                causa = f"<b>Causa Raíz Principal:</b> Pérdida de Tráfico. La brecha presupuestal está impulsada principalmente por una contracción de <b>{gap_tx:+,.0f} Transacciones ({var_tx:+.1f}% vs AA)</b>. El Ticket Promedio responde bien situándose en ${tk_act:,.0f}."
+                causa = f"<b>🔍 Causa Raíz Comercial:</b> Pérdida de Tráfico / Flujo de Clientes. La brecha de presupuesto obedece a una caída de <b>{gap_tx:+,.0f} Transacciones ({var_tx:+.1f}% vs AA)</b>, a pesar de que el Ticket Promedio evoluciona favorablemente en ${tk_act:,.0f}."
             elif gap_tk < 0:
-                causa = f"<b>Causa Raíz Principal:</b> Subconsumo / Mezcla de Producto. El tráfico de clientes crece (<b>{gap_tx:+,.0f} Tx</b>), pero el Ticket Promedio está <b>${abs(gap_tk):,.0f}</b> por debajo de la meta del {meta_ticket_pct:.0f}%."
+                causa = f"<b>🔍 Causa Raíz Comercial:</b> Subconsumo / Desviación en Mix de Producto. El tráfico de clientes crece (<b>{gap_tx:+,.0f} Transacciones</b>), pero el Ticket Promedio está <b>${abs(gap_tk):,.0f}</b> por debajo de la meta del {meta_ticket_pct:.0f}%."
             else:
-                causa = "<b>Causa Raíz Principal:</b> Excelente Desempeño Operativo. Se registran incrementos positivos tanto en tráfico de clientes como en ticket promedio frente al año anterior."
+                causa = "<b>🔍 Causa Raíz Comercial:</b> Desempeño Operativo Eficiente. Se registran crecimientos sólidos tanto en volumen de transacciones como en ticket promedio frente al año anterior."
             analisis.append(causa)
 
-            if gap_tx < 0:
-                rec = "<b>Recomendación Comercial:</b> Activar estrategias de atracción de tráfico en horas valle y alianzas locales de visibilidad."
-            else:
-                rec = "<b>Recomendación Comercial:</b> Fomentar sugerencia de combos y adicionales en barra (Cross-selling / Upselling) para elevar el valor del ticket."
-            analisis.append(rec)
+            # 3. Análisis Detallado por Gerencia Regional y Tiendas Foco
+            analisis.append("<b>📍 Análisis por Gerencia Regional y Tiendas Foco de Atención:</b>")
+            
+            gerentes = sorted([g for g in df_data['Gerente'].dropna().unique() if str(g) != 'nan'])
+            
+            for ger in gerentes:
+                df_g = df_data[df_data['Gerente'] == ger]
+                v_g = df_g['Ventas_Real_Act'].sum()
+                p_g = df_g['Ppto_Real_Act'].sum()
+                gap_g = df_g['GAP_Act'].sum()
+                cump_g = (v_g / p_g * 100) if p_g > 0 else 0.0
+                
+                # Identificar tiendas críticas en la regional
+                df_foco = df_g[df_g['Escenario'].isin(['Aumentó Faltante 🔴', 'Mantuvo Faltante 🟡'])].sort_values(by='GAP_Act', ascending=True)
+                
+                txt_ger = f"• <b>Gerencia {str(ger).upper()}:</b> Cumplimiento al <b>{cump_g:.1f}%</b> | GAP Presupuesto: <b>${gap_g:,.0f}</b>."
+                
+                if not df_foco.empty:
+                    txt_ger += f"<br>&nbsp;&nbsp;&nbsp;&nbsp;⚠️ <i>Tiendas Foco ({len(df_foco)} Puntos):</i>"
+                    for _, row_f in df_foco.iterrows():
+                        txt_ger += f"<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <b>{row_f['Tienda']}</b> (Sup. {row_f['Supervisor']}): Cumpl. <b>{row_f['Cumpl_Act_%']:.1f}%</b> | GAP: <b>${row_f['GAP_Act']:,.0f}</b> | Estado: {row_f['Escenario']}"
+                else:
+                    txt_ger += "<br>&nbsp;&nbsp;&nbsp;&nbsp;✅ <i>Sin tiendas en estado crítico de alerta.</i>"
+                
+                analisis.append(txt_ger)
 
             return "<br><br>".join(analisis)
 
@@ -414,14 +439,14 @@ if uploaded_file:
             
             col_ai_btn, _ = st.columns([1, 2])
             with col_ai_btn:
-                btn_ia = st.button("🤖 Generar Diagnóstico con IA", type="primary", use_container_width=True)
+                btn_ia = st.button("📊 Generar Diagnóstico Gerencial", type="primary", use_container_width=True)
 
             if btn_ia:
-                with st.spinner("Analizando desviaciones comerciales y comportamiento de tráfico..."):
-                    resumen_texto = generar_analisis_ia(df_base)
+                with st.spinner("Generando diagnóstico por gerencia y consolidando tiendas foco..."):
+                    resumen_texto = generar_diagnostico_gerencial(df_base)
                     st.markdown(f"""
                     <div class="ai-box">
-                        <div class="ai-title">🧠 ANÁLISIS GERENCIAL DE IA</div>
+                        <div class="ai-title">📋 DIAGNÓSTICO EJECUTIVO Y REGIONAL DE DESEMPEÑO</div>
                         <div style="color: #451A03; font-size: 13px; line-height: 1.6;">{resumen_texto}</div>
                     </div>
                     """, unsafe_allow_html=True)
