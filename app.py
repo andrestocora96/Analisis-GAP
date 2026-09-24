@@ -10,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 🎨 PALETA WARM CORPORATE / BEIGE PREMIUM JUAN VALDEZ & DISEÑO DE TARJETAS INTERACTIVAS
+# 🎨 PALETA WARM CORPORATE / BEIGE PREMIUM JUAN VALDEZ & ESTILOS DE TARJETAS Y BOTONES
 st.markdown("""
 <style>
     /* Fondo General Crema / Beige Cálido */
@@ -75,21 +75,16 @@ st.markdown("""
     .card-value { font-size: 18px; font-weight: 800; margin: 2px 0; }
     .card-sub { font-size: 10px; color: #786F66; font-weight: 600; }
 
-    /* CONTENEDOR DE TARJETA INTERACTIVA DE ESCENARIOS */
+    /* CONTENEDOR DE TARJETA DE ESCENARIO ORIGINAL */
     .esc-container {
         position: relative;
         background-color: #FFFFFF;
-        border-radius: 10px;
-        padding: 8px;
+        border-radius: 12px;
+        padding: 10px 8px;
         text-align: center;
         box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
         border: 1px solid #E2E8F0;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
         margin-bottom: 6px;
-    }
-    .esc-container:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
     }
     .border-green { border-left: 5px solid #16A34A !important; }
     .border-yellow { border-left: 5px solid #D97706 !important; }
@@ -101,38 +96,52 @@ st.markdown("""
         color: #475569;
         text-transform: uppercase;
         margin-bottom: 2px;
-        height: 24px;
+        height: 22px;
         display: flex;
         align-items: center;
         justify-content: center;
     }
     .esc-count {
-        font-size: 19px;
+        font-size: 22px;
         font-weight: 800;
-        margin: 1px 0;
+        margin: 0px 0;
     }
     .esc-sub {
         font-size: 10px;
         color: #94A3B8;
         font-weight: 600;
+        margin-bottom: 4px;
+    }
+    .esc-total-gap {
+        font-size: 11px;
+        font-weight: 800;
+        background-color: #F8FAFC;
+        padding: 3px 6px;
+        border-radius: 6px;
+        border: 1px solid #F1F5F9;
+        margin-top: 2px;
+        display: inline-block;
     }
 
-    /* BOTÓN COMPACTO DE BAJA ALTURA */
+    /* BOTÓN COMPACTO DE BAJA ALTURA Y COLOR OSCURO TINTO EJECUTIVO */
     div[data-testid="stColumn"] div[data-testid="stButton"] > button {
-        padding: 2px 8px !important;
-        height: 28px !important;
-        min-height: 28px !important;
-        font-size: 11px !important;
-        font-weight: 600 !important;
+        padding: 2px 6px !important;
+        height: 26px !important;
+        min-height: 26px !important;
+        font-size: 10px !important;
+        font-weight: 700 !important;
         border-radius: 6px !important;
-        background-color: #FFFFFF !important;
-        border: 1px solid #CBD5E1 !important;
-        color: #475569 !important;
+        background-color: #58000E !important;
+        border: 1px solid #3B0009 !important;
+        color: #FFFFFF !important;
+        box-shadow: 0 2px 4px rgba(88, 0, 14, 0.2) !important;
+        transition: all 0.2s ease !important;
     }
     div[data-testid="stColumn"] div[data-testid="stButton"] > button:hover {
-        background-color: #F8FAFC !important;
-        border-color: #94A3B8 !important;
-        color: #0F172A !important;
+        background-color: #8C0017 !important;
+        border-color: #8C0017 !important;
+        color: #FFFFFF !important;
+        transform: translateY(-1px) !important;
     }
 
     /* Titulo Gris Discreto para Sección GAP Escenarios */
@@ -326,20 +335,27 @@ st.sidebar.header("🎯 Metas Comerciales")
 meta_ticket_pct = st.sidebar.number_input("Meta Crecimiento Ticket Promedio (%):", value=10.0, step=0.5, format="%.1f")
 
 # -----------------------------------------------------------------------------
-# POP-UP EXCLUSIVO CON TIENDA Y VALOR DE EVOLUCIÓN DE GAP ($)
+# POP-UP CON LISTADO COMPLETO DE TIENDAS Y DETALLE DE GAP
 # -----------------------------------------------------------------------------
-@st.dialog("🏬 Lista de Tiendas por Escenario", width="medium")
+@st.dialog("🏬 Lista Detallada de Tiendas por Escenario", width="large")
 def mostrar_popup_escenario(nombre_escenario, df_filtrado):
     st.markdown(f"### Escenario: **{nombre_escenario}**")
     st.markdown(f"Total Puntos de Venta: **{len(df_filtrado)}**")
     
     if not df_filtrado.empty:
-        tabla_popup = df_filtrado[['Tienda', 'Evolucion_GAP_$']].copy()
-        tabla_popup.columns = ['Tienda', 'Evolución GAP ($) (Cuelgue Ant. vs Nuevo)']
+        tabla_popup = df_filtrado[[
+            'Tienda', 'Supervisor', 'Gerente', 'Cumpl_Act_%', 'GAP_Act', 'Evolucion_GAP_$'
+        ]].copy()
+        
+        tabla_popup.columns = [
+            'Tienda', 'Supervisor', 'Gerente', 'Cumpl. %', 'GAP Presupuesto ($)', 'Evolución GAP ($)'
+        ]
         
         st.dataframe(
-            tabla_popup.sort_values(by='Evolución GAP ($) (Cuelgue Ant. vs Nuevo)', ascending=False).style.format({
-                'Evolución GAP ($) (Cuelgue Ant. vs Nuevo)': '${:+,.0f}'
+            tabla_popup.sort_values(by='GAP Presupuesto ($)', ascending=True).style.format({
+                'Cumpl. %': '{:.1f}%',
+                'GAP Presupuesto ($)': '${:,.0f}',
+                'Evolución GAP ($)': '${:+,.0f}'
             }),
             use_container_width=True,
             height=400
@@ -441,7 +457,7 @@ if file_to_process:
         if solo_pareto: df_base = df_base[df_base['Pareto'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
         if solo_comparable: df_base = df_base[df_base['Comparable_Val'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
 
-        # DIAGNÓSTICO GERENCIAL INTEGRANDO ANÁLISIS PARETO Y PARTICIPACIÓN
+        # DIAGNÓSTICO GERENCIAL CON ENFOQUE PARETO
         def generar_diagnostico_gerencial(df_data):
             v_act = df_data['Ventas_Real_Act'].sum()
             ppto_act = df_data['Ppto_Real_Act'].sum()
@@ -531,7 +547,7 @@ if file_to_process:
 
             return "<br><br>".join(analisis)
 
-        # RENDERIZADO INTEGRAL DE KPIS CON FLECHAS DE TENDENCIA (VERDE/ROJA)
+        # RENDERIZADO INTEGRAL DE KPIS CON SUMA DE GAP TOTAL Y BOTÓN DE VER DETALLE OSCURO COMPACTO
         def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
@@ -557,8 +573,7 @@ if file_to_process:
             gap_ticket_monto = ticket_act - ticket_obj
             var_ticket_aa = ((ticket_act - ticket_aa) / ticket_aa * 100) if ticket_aa > 0 else 0.0
 
-            # CÁLCULO DE FLECHAS DE EVOLUCIÓN (VERDE = MEJORÓ / ROJA = EMPEORÓ)
-            # Para el GAP, si la evolución (gap_act - gap_ant) es >= 0 significa que se mejoró la posición presupuestal
+            # FLECHAS DE EVOLUCIÓN EN TARJETA PRINCIPAL
             if evol_gap_monto >= 0:
                 flecha_gap = "🟢 ▲"
                 col_sub_gap = "#16A34A"
@@ -631,33 +646,40 @@ if file_to_process:
                 )
                 st.plotly_chart(fig_g, use_container_width=True, key=f"gauge_{key_suffix}")
 
-            # SECCIÓN GAP CON TARJETAS Y BOTÓN PEQUEÑO "VER DETALLE"
+            # SECCIÓN GAP CON SUMA DE VALOR TOTAL Y BOTÓN DE DETALLE COMPACTO OSCURO
             st.markdown('<div class="gap-section-title">GAP & DISTRIBUCIÓN DE TIENDAS POR ESCENARIO</div>', unsafe_allow_html=True)
             
-            conteo = df_activas['Escenario'].value_counts()
-            
+            # CÁLCULO DE CANTIDADES Y SUMATORIA DE GAP POR ESCENARIO
             escenarios_info = [
-                ("Pasa de Negativo a Positivo 🟢", "PASA A POSITIVO", conteo.get('Pasa de Negativo a Positivo 🟢', 0), "border-green", "#16A34A"),
-                ("Amplió Superávit 🟢", "AMPLIÓ SUPERÁVIT", conteo.get('Amplió Superávit 🟢', 0), "border-green", "#16A34A"),
-                ("Mantuvo Superávit 🟢", "MANTUVO SUPERÁVIT", conteo.get('Mantuvo Superávit 🟢', 0), "border-green", "#16A34A"),
-                ("Recortó Faltante 🟢", "RECORTÓ FALTANTE", conteo.get('Recortó Faltante 🟢', 0), "border-green", "#16A34A"),
-                ("Mantuvo Faltante 🟡", "MANTUVO FALTANTE", conteo.get('Mantuvo Faltante 🟡', 0), "border-yellow", "#D97706"),
-                ("Aumentó Faltante 🔴", "AUMENTÓ FALTANTE", conteo.get('Aumentó Faltante 🔴', 0), "border-red", "#DC2626")
+                ("Pasa de Negativo a Positivo 🟢", "PASA A POSITIVO", "border-green", "#16A34A"),
+                ("Amplió Superávit 🟢", "AMPLIÓ SUPERÁVIT", "border-green", "#16A34A"),
+                ("Mantuvo Superávit 🟢", "MANTUVO SUPERÁVIT", "border-green", "#16A34A"),
+                ("Recortó Faltante 🟢", "RECORTÓ FALTANTE", "border-green", "#16A34A"),
+                ("Mantuvo Faltante 🟡", "MANTUVO FALTANTE", "border-yellow", "#D97706"),
+                ("Aumentó Faltante 🔴", "AUMENTÓ FALTANTE", "border-red", "#DC2626")
             ]
 
             e_cols = st.columns(6)
-            for i, (nombre_esc, label_esc, cant, border_class, color_num) in enumerate(escenarios_info):
+            for i, (nombre_esc, label_esc, border_class, color_num) in enumerate(escenarios_info):
+                df_esc_filtrado = df_activas[df_activas['Escenario'] == nombre_esc]
+                cant = len(df_esc_filtrado)
+                suma_gap_esc = df_esc_filtrado['GAP_Act'].sum()
+                
+                color_gap_txt = "#16A34A" if suma_gap_esc >= 0 else "#DC2626"
+                
                 with e_cols[i]:
                     st.markdown(f"""
                     <div class="esc-container {border_class}">
                         <div class="esc-title">{label_esc}</div>
                         <div class="esc-count" style="color:{color_num};">{cant}</div>
                         <div class="esc-sub">Tiendas</div>
+                        <div class="esc-total-gap" style="color:{color_gap_txt};">
+                            GAP: ${suma_gap_esc:+,.0f}
+                        </div>
                     </div>
                     """, unsafe_allow_html=True)
                     
                     if st.button("Ver detalle", key=f"btn_esc_{i}_{key_suffix}", use_container_width=True):
-                        df_esc_filtrado = df_activas[df_activas['Escenario'] == nombre_esc]
                         mostrar_popup_escenario(nombre_esc, df_esc_filtrado)
 
         tab1, tab2 = st.tabs(["📊 Informe Gerencial GAP", "🔍 Análisis por Gerencia"])
