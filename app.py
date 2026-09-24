@@ -377,7 +377,7 @@ if file_to_process:
 
             return "<br><br>".join(analisis)
 
-        # RENDERIZADO INTEGRAL DE KPIS (VENTAS + CRECIMIENTO AA + TRÁFICO AA + TICKET META)
+        # RENDERIZADO INTEGRAL DE KPIS
         def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
@@ -405,7 +405,6 @@ if file_to_process:
             gap_ticket_monto = ticket_act - ticket_obj
             var_ticket_aa = ((ticket_act - ticket_aa) / ticket_aa * 100) if ticket_aa > 0 else 0.0
 
-            # 6 COLUMNAS DE MÉTRICAS
             k1, k2, k3, k4, k5, k6 = st.columns([1, 1, 1, 1, 1.2, 1])
             with k1:
                 st.markdown(f"""
@@ -554,6 +553,7 @@ if file_to_process:
             
             df_sup_agg['Cumpl_%'] = (df_sup_agg['Ventas_Act'] / df_sup_agg['Ppto_Act'].replace(0, 1)) * 100
             df_sup_agg['GAP_Tx_AA'] = df_sup_agg['Tx_Act'] - df_sup_agg['Tx_AA']
+            df_sup_agg['Var_Tx_AA_%'] = ((df_sup_agg['Tx_Act'] - df_sup_agg['Tx_AA']) / df_sup_agg['Tx_AA'].replace(0, 1)) * 100
 
             col_g1, col_g2 = st.columns(2)
             with col_g1:
@@ -561,18 +561,22 @@ if file_to_process:
                     df_sup_agg.sort_values(by='Cumpl_%', ascending=True),
                     y='Supervisor', x='Cumpl_%', color='Cumpl_%',
                     color_continuous_scale=['#8C0017', '#FEF3C7', '#16A34A'],
-                    orientation='h', title="CUMPLIMIENTO DE PRESUPUESTO (%) POR SUPERVISOR", text_auto='.1f%'
+                    orientation='h', title="CUMPLIMIENTO DE PRESUPUESTO (%) POR SUPERVISOR",
+                    text_auto='.1f'
                 )
+                fig_sup.update_traces(texttemplate='%{x:.1f}%', textposition='outside')
                 fig_sup.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                 st.plotly_chart(fig_sup, use_container_width=True, key="fig_sup_chart")
                 
             with col_g2:
                 fig_tx = px.bar(
-                    df_sup_agg.sort_values(by='GAP_Tx_AA', ascending=True),
-                    y='Supervisor', x='GAP_Tx_AA', color='GAP_Tx_AA',
+                    df_sup_agg.sort_values(by='Var_Tx_AA_%', ascending=True),
+                    y='Supervisor', x='Var_Tx_AA_%', color='Var_Tx_AA_%',
                     color_continuous_scale=['#DC2626', '#D97706', '#2563EB'],
-                    orientation='h', title="GAP DE TRANSACCIONES VS AÑO ANTERIOR (Tx) POR SUPERVISOR", text_auto=',.0f'
+                    orientation='h', title="VARIACIÓN % DE TRANSACCIONES VS AÑO ANTERIOR POR SUPERVISOR",
+                    text_auto='.1f'
                 )
+                fig_tx.update_traces(texttemplate='%{x:+.1f}%', textposition='outside')
                 fig_tx.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                 st.plotly_chart(fig_tx, use_container_width=True, key="fig_tx_chart")
 
@@ -598,26 +602,27 @@ if file_to_process:
                 fig_tiendas.update_layout(height=max(420, len(df_tab2) * 22), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                 st.plotly_chart(fig_tiendas, use_container_width=True, key="fig_tiendas_chart")
 
-            # NUEVA GRÁFICA HORIZONTAL DE COMPORTAMIENTO DE TRANSACCIONES POR TIENDA
+            # GRÁFICA HORIZONTAL EN PORCENTAJE (%) DE TRANSACCIONES POR TIENDA (FOTO 1 Y 2 CORREGIDAS)
             with col_bar2:
                 fig_tx_tiendas = px.bar(
-                    df_tab2.sort_values(by='GAP_Tx_AA', ascending=True),
-                    y='Tienda', x='GAP_Tx_AA', color='GAP_Tx_AA',
+                    df_tab2.sort_values(by='Var_Tx_AA_%', ascending=True),
+                    y='Tienda', x='Var_Tx_AA_%', color='Var_Tx_AA_%',
                     color_continuous_scale=['#DC2626', '#EAB308', '#2563EB'],
-                    orientation='h', title="VARIACIÓN DE TRANSACCIONES VS AÑO ANTERIOR (Tx) POR TIENDA", text_auto=',.0f'
+                    orientation='h', title="VARIACIÓN DE TRANSACCIONES VS AÑO ANTERIOR (%) POR TIENDA"
                 )
+                fig_tx_tiendas.update_traces(texttemplate='%{x:+.1f}%', textposition='outside')
                 fig_tx_tiendas.update_layout(height=max(420, len(df_tab2) * 22), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                 st.plotly_chart(fig_tx_tiendas, use_container_width=True, key="fig_tx_tiendas_chart")
 
             st.markdown("#### 📋 TABLA DE CAUSA RAÍZ: VENTAS, GAP TRANSACCIONES (AA) Y EVALUACIÓN DE TICKET")
             tabla_causa = df_tab2.sort_values(by='Cumpl_Act_%', ascending=False)[[
                 'Tienda', 'Gerente', 'Supervisor', 'Cumpl_Act_%', 'GAP_Act', 'Evolucion_GAP_$', 
-                'Tx_Real_Act', 'GAP_Tx_AA', 'Ticket_Act', 'GAP_Ticket_$', 'Escenario'
+                'Tx_Real_Act', 'Var_Tx_AA_%', 'Ticket_Act', 'GAP_Ticket_$', 'Escenario'
             ]].copy()
             
             tabla_causa.columns = [
                 'Tienda', 'Gerente', 'Supervisor', 'Cumpl %', 'GAP Act ($)', 'Evol GAP ($)',
-                'Tx Act', 'GAP Tx (VS AA)', 'Ticket Act ($)', f'GAP Ticket vs {meta_ticket_pct:.0f}% ($)', 'Escenario'
+                'Tx Act', 'Var Tx AA %', 'Ticket Act ($)', f'GAP Ticket vs {meta_ticket_pct:.0f}% ($)', 'Escenario'
             ]
             
             st.dataframe(
@@ -626,7 +631,7 @@ if file_to_process:
                     'GAP Act ($)': '${:,.0f}',
                     'Evol GAP ($)': '${:+,.0f}',
                     'Tx Act': '{:,.0f}',
-                    'GAP Tx (VS AA)': '{:+,.0f}',
+                    'Var Tx AA %': '{:+.1f}%',
                     'Ticket Act ($)': '${:,.0f}',
                     f'GAP Ticket vs {meta_ticket_pct:.0f}% ($)': '${:+,.0f}'
                 }),
