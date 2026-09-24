@@ -75,31 +75,10 @@ st.markdown("""
     .card-value { font-size: 18px; font-weight: 800; margin: 2px 0; }
     .card-sub { font-size: 10px; color: #786F66; font-weight: 600; }
 
-    /* Tarjetas de Escenario Compactas (Parte Inferior) */
-    .scenario-card {
-        background-color: #FFFFFF;
-        border-radius: 8px;
-        padding: 8px 6px;
-        box-shadow: 0 2px 6px rgba(90, 80, 70, 0.05);
-        border: 1px solid #EFE8DE;
-        text-align: center;
-    }
-    .scenario-title {
-        font-size: 9px;
-        font-weight: 800;
-        color: #64748B;
-        text-transform: uppercase;
-        margin-bottom: 2px;
-    }
-    .scenario-value {
-        font-size: 16px;
-        font-weight: 800;
-        margin: 1px 0;
-    }
-    .scenario-sub {
-        font-size: 9px;
-        color: #94A3B8;
-        font-weight: 500;
+    /* Estilos para Botones de Escenario */
+    div[data-testid="stButton"] > button {
+        border-radius: 10px !important;
+        font-weight: 700 !important;
     }
 
     /* Titulo Gris Discreto para Sección GAP Escenarios */
@@ -292,6 +271,35 @@ st.sidebar.markdown("---")
 st.sidebar.header("🎯 Metas Comerciales")
 meta_ticket_pct = st.sidebar.number_input("Meta Crecimiento Ticket Promedio (%):", value=10.0, step=0.5, format="%.1f")
 
+# -----------------------------------------------------------------------------
+# POP-UP / DIALOG EMERGENTE PARA MOSTRAR TIENDAS POR ESCENARIO
+# -----------------------------------------------------------------------------
+@st.dialog("📋 Detalle de Tiendas por Escenario")
+def mostrar_popup_escenario(nombre_escenario, df_filtrado):
+    st.markdown(f"### Escenario: **{nombre_escenario}**")
+    st.markdown(f"Total de Puntos de Venta: **{len(df_filtrado)}**")
+    
+    if not df_filtrado.empty:
+        tabla_popup = df_filtrado[[
+            'Tienda', 'Supervisor', 'Gerente', 'Cumpl_Act_%', 'GAP_Act', 'Evolucion_GAP_$'
+        ]].copy()
+        
+        tabla_popup.columns = [
+            'Tienda', 'Supervisor', 'Gerente', 'Cumpl %', 'GAP Act ($)', 'Diferencia GAP ($)'
+        ]
+        
+        st.dataframe(
+            tabla_popup.sort_values(by='GAP Act ($)', ascending=True).style.format({
+                'Cumpl %': '{:.1f}%',
+                'GAP Act ($)': '${:,.0f}',
+                'Diferencia GAP ($)': '${:+,.0f}'
+            }),
+            use_container_width=True,
+            height=380
+        )
+    else:
+        st.info("No hay tiendas registradas bajo este escenario con los filtros aplicados.")
+
 if file_to_process:
     df_tot, lista_ciclos = cargar_datos(file_to_process)
     
@@ -453,7 +461,7 @@ if file_to_process:
 
             return "<br><br>".join(analisis)
 
-        # RENDERIZADO INTEGRAL DE KPIS
+        # RENDERIZADO INTEGRAL DE KPIS CON BOTONES DE POP-UP INTERACTIVOS
         def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
@@ -543,17 +551,27 @@ if file_to_process:
                 )
                 st.plotly_chart(fig_g, use_container_width=True, key=f"gauge_{key_suffix}")
 
-            # SECCIÓN GAP COMPACTA CON TÍTULO DISCRETO
-            st.markdown('<div class="gap-section-title">GAP & DISTRIBUCIÓN DE TIENDAS POR ESCENARIO</div>', unsafe_allow_html=True)
+            # SECCIÓN GAP COMPACTA CON BOTONES INTERACTIVOS POP-UP
+            st.markdown('<div class="gap-section-title">GAP & DISTRIBUCIÓN DE TIENDAS POR ESCENARIO (HAZ CLIC EN CUALQUIERA PARA VER DETALLE)</div>', unsafe_allow_html=True)
             
             conteo = df_activas['Escenario'].value_counts()
-            e1, e2, e3, e4, e5, e6 = st.columns(6)
-            with e1: st.markdown(f"""<div class="scenario-card" style="border-left: 3px solid #16A34A;"><div class="scenario-title">PASA A POSITIVO</div><div class="scenario-value" style="color:#16A34A;">{conteo.get('Pasa de Negativo a Positivo 🟢', 0)}</div><div class="scenario-sub">Tiendas</div></div>""", unsafe_allow_html=True)
-            with e2: st.markdown(f"""<div class="scenario-card" style="border-left: 3px solid #16A34A;"><div class="scenario-title">AMPLIÓ SUPERÁVIT</div><div class="scenario-value" style="color:#16A34A;">{conteo.get('Amplió Superávit 🟢', 0)}</div><div class="scenario-sub">Tiendas</div></div>""", unsafe_allow_html=True)
-            with e3: st.markdown(f"""<div class="scenario-card" style="border-left: 3px solid #16A34A;"><div class="scenario-title">MANTUVO SUPERÁVIT</div><div class="scenario-value" style="color:#16A34A;">{conteo.get('Mantuvo Superávit 🟢', 0)}</div><div class="scenario-sub">Tiendas</div></div>""", unsafe_allow_html=True)
-            with e4: st.markdown(f"""<div class="scenario-card" style="border-left: 3px solid #16A34A;"><div class="scenario-title">RECORTÓ FALTANTE</div><div class="scenario-value" style="color:#16A34A;">{conteo.get('Recortó Faltante 🟢', 0)}</div><div class="scenario-sub">Tiendas</div></div>""", unsafe_allow_html=True)
-            with e5: st.markdown(f"""<div class="scenario-card" style="border-left: 3px solid #D97706;"><div class="scenario-title">MANTUVO FALTANTE</div><div class="scenario-value" style="color:#D97706;">{conteo.get('Mantuvo Faltante 🟡', 0)}</div><div class="scenario-sub">Tiendas</div></div>""", unsafe_allow_html=True)
-            with e6: st.markdown(f"""<div class="scenario-card" style="border-left: 3px solid #DC2626;"><div class="scenario-title">AUMENTÓ FALTANTE</div><div class="scenario-value" style="color:#DC2626;">{conteo.get('Aumentó Faltante 🔴', 0)}</div><div class="scenario-sub">Tiendas</div></div>""", unsafe_allow_html=True)
+            
+            escenarios_info = [
+                ("Pasa de Negativo a Positivo 🟢", "PASA A POSITIVO", conteo.get('Pasa de Negativo a Positivo 🟢', 0)),
+                ("Amplió Superávit 🟢", "AMPLIÓ SUPERÁVIT", conteo.get('Amplió Superávit 🟢', 0)),
+                ("Mantuvo Superávit 🟢", "MANTUVO SUPERÁVIT", conteo.get('Mantuvo Superávit 🟢', 0)),
+                ("Recortó Faltante 🟢", "RECORTÓ FALTANTE", conteo.get('Recortó Faltante 🟢', 0)),
+                ("Mantuvo Faltante 🟡", "MANTUVO FALTANTE", conteo.get('Mantuvo Faltante 🟡', 0)),
+                ("Aumentó Faltante 🔴", "AUMENTÓ FALTANTE", conteo.get('Aumentó Faltante 🔴', 0))
+            ]
+
+            e_cols = st.columns(6)
+            for i, (nombre_esc, label_esc, cant) in enumerate(escenarios_info):
+                with e_cols[i]:
+                    label_btn = f"{label_esc}\n\n{cant} Tiendas"
+                    if st.button(label_btn, key=f"btn_esc_{i}_{key_suffix}", use_container_width=True):
+                        df_esc_filtrado = df_activas[df_activas['Escenario'] == nombre_esc]
+                        mostrar_popup_escenario(nombre_esc, df_esc_filtrado)
 
         tab1, tab2 = st.tabs(["📊 Informe Gerencial GAP", "🔍 Análisis por Gerencia"])
 
@@ -598,7 +616,6 @@ if file_to_process:
         with tab2:
             st.markdown("### 🎯 FILTROS DE ANÁLISIS DETALLADO")
             
-            # Inicialización previa de variables de estado de sesión
             if "tab2_ger" not in st.session_state:
                 st.session_state["tab2_ger"] = "Todos"
             if "tab2_sup" not in st.session_state:
@@ -606,13 +623,11 @@ if file_to_process:
             if "tab2_tienda" not in st.session_state:
                 st.session_state["tab2_tienda"] = "Todas"
 
-            # Función de callback para reiniciar los filtros de forma segura en Streamlit
             def reset_filtros_tab2():
                 st.session_state["tab2_ger"] = "Todos"
                 st.session_state["tab2_sup"] = "Todos"
                 st.session_state["tab2_tienda"] = "Todas"
 
-            # 4 COLUMNAS DE FILTROS: GERENTE, SUPERVISOR, TIENDA Y REINICIO
             f1, f2, f3, f4 = st.columns([2, 2, 2, 1])
 
             with f1:
@@ -637,7 +652,6 @@ if file_to_process:
 
             st.markdown("---")
             
-            # Etiqueta de la cabecera dinámica de indicadores
             label_scope = s_tienda if s_tienda != 'Todas' else (s_sup if s_sup != 'Todos' else (s_ger if s_ger != 'Todos' else 'GLOBAL'))
             st.markdown(f"### 📈 INDICADORES CLAVE DE GESTIÓN ({label_scope})")
             render_kpi_block(df_tab2, key_suffix="tab2_kpis")
