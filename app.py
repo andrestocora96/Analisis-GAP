@@ -414,7 +414,7 @@ if file_to_process:
 
             return "<br><br>".join(analisis)
 
-        # RENDERIZADO INTEGRAL DE KPIS (REDISEÑADO CON VALORES MÁS LIMPIOS Y BOTONES COMPACTOS)
+        # RENDERIZADO INTEGRAL DE KPIS
         def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
@@ -598,13 +598,12 @@ if file_to_process:
                     orientation='h', title="CUMPLIMIENTO DE PRESUPUESTO (%) POR SUPERVISOR",
                     text_auto='.1f'
                 )
-                fig_sup.update_traces(texttemplate='%{x:.1f}%', textposition='outside')
+                fig_sup.update_traces(texttemplate='%{x:.1f}%', textposition='outside', cliponaxis=False)
                 fig_sup.update_layout(
                     height=350, 
                     margin=dict(r=80, l=10, t=30, b=10),
                     paper_bgcolor='rgba(0,0,0,0)', 
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    xaxis=dict(cliponaxis=False)
+                    plot_bgcolor='rgba(0,0,0,0)'
                 )
                 st.plotly_chart(fig_sup, use_container_width=True, key="fig_sup_chart")
                 
@@ -616,13 +615,12 @@ if file_to_process:
                     orientation='h', title="VARIACIÓN % DE TRANSACCIONES VS AÑO ANTERIOR POR SUPERVISOR",
                     text_auto='.1f'
                 )
-                fig_tx.update_traces(texttemplate='%{x:+.1f}%', textposition='outside')
+                fig_tx.update_traces(texttemplate='%{x:+.1f}%', textposition='outside', cliponaxis=False)
                 fig_tx.update_layout(
                     height=350, 
                     margin=dict(r=80, l=10, t=30, b=10),
                     paper_bgcolor='rgba(0,0,0,0)', 
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    xaxis=dict(cliponaxis=False)
+                    plot_bgcolor='rgba(0,0,0,0)'
                 )
                 st.plotly_chart(fig_tx, use_container_width=True, key="fig_tx_chart")
 
@@ -645,12 +643,12 @@ if file_to_process:
                     },
                     orientation='h', title="VARIACIÓN DE GAP DE PPTO ($) POR TIENDA"
                 )
+                fig_tiendas.update_traces(cliponaxis=False)
                 fig_tiendas.update_layout(
                     height=max(420, len(df_tab2) * 22), 
                     margin=dict(r=50, l=10, t=30, b=10),
                     paper_bgcolor='rgba(0,0,0,0)', 
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    xaxis=dict(cliponaxis=False)
+                    plot_bgcolor='rgba(0,0,0,0)'
                 )
                 st.plotly_chart(fig_tiendas, use_container_width=True, key="fig_tiendas_chart")
 
@@ -661,13 +659,12 @@ if file_to_process:
                     color_continuous_scale=['#DC2626', '#EAB308', '#2563EB'],
                     orientation='h', title="VARIACIÓN DE TRANSACCIONES VS AÑO ANTERIOR (%) POR TIENDA"
                 )
-                fig_tx_tiendas.update_traces(texttemplate='%{x:+.1f}%', textposition='outside')
+                fig_tx_tiendas.update_traces(texttemplate='%{x:+.1f}%', textposition='outside', cliponaxis=False)
                 fig_tx_tiendas.update_layout(
                     height=max(420, len(df_tab2) * 22), 
                     margin=dict(r=80, l=10, t=30, b=10),
                     paper_bgcolor='rgba(0,0,0,0)', 
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    xaxis=dict(cliponaxis=False)
+                    plot_bgcolor='rgba(0,0,0,0)'
                 )
                 st.plotly_chart(fig_tx_tiendas, use_container_width=True, key="fig_tx_tiendas_chart")
 
