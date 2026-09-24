@@ -388,6 +388,14 @@ if file_to_process:
         elif 'Pareto_Act' in df_merged.columns: df_merged['Pareto'] = df_merged['Pareto_Act']
         elif 'Pareto' not in df_merged.columns: df_merged['Pareto'] = 'NO'
 
+        # AGREGAR ESTRELLA ⭐ A TODAS LAS TIENDAS PARETO DE FORMA GLOBAL
+        patron_p = 'SI|S|1|PARETO|TRUE'
+        es_pareto = df_merged['Pareto'].astype(str).str.upper().str.contains(patron_p, regex=True, na=False)
+        df_merged['Tienda'] = df_merged.apply(
+            lambda r: f"{r['Tienda']} ⭐" if (str(r['Pareto']).upper().strip() in ['SI', 'S', '1', 'PARETO', 'TRUE']) and not str(r['Tienda']).endswith('⭐') else r['Tienda'],
+            axis=1
+        )
+
         comp_col = None
         for c in ['Comparable _Act', 'Comparable_Act', 'Comparable ']:
             if c in df_merged.columns: comp_col = c; break
@@ -436,7 +444,7 @@ if file_to_process:
         f_col1, f_col2 = st.columns(2)
         with f_col1:
             st.markdown('<div class="filter-card-red"><div class="filter-card-title">Filtro Tiendas Pareto</div>', unsafe_allow_html=True)
-            solo_pareto = st.toggle("Solo Tiendas Pareto", value=False, key="sw_pareto")
+            solo_pareto = st.toggle("Solo Tiendas Pareto ⭐", value=False, key="sw_pareto")
             st.markdown('</div>', unsafe_allow_html=True)
         with f_col2:
             st.markdown('<div class="filter-card-red"><div class="filter-card-title">Filtro Tiendas Comparables</div>', unsafe_allow_html=True)
@@ -492,8 +500,8 @@ if file_to_process:
             analisis.append(causa)
 
             # BLOQUE PARETO
-            patron_p = 'SI|S|1|PARETO|TRUE'
-            df_pareto = df_data[df_data['Pareto'].astype(str).str.upper().str.contains(patron_p, regex=True, na=False)].copy()
+            patron_p_diag = 'SI|S|1|PARETO|TRUE'
+            df_pareto = df_data[df_data['Pareto'].astype(str).str.upper().str.contains(patron_p_diag, regex=True, na=False)].copy()
             
             if not df_pareto.empty:
                 df_pareto['Part_Venta_%'] = (df_pareto['Ventas_Real_Act'] / (v_act if v_act > 0 else 1)) * 100
@@ -538,7 +546,7 @@ if file_to_process:
 
             return "<br><br>".join(analisis)
 
-        # RENDERIZADO DE KPIS CON FLECHA DE TENDENCIA EN COLOR VERDE SI MEJORÓ
+        # RENDERIZADO DE KPIS CON FLECHA DE TENDENCIA
         def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
@@ -564,7 +572,6 @@ if file_to_process:
             gap_ticket_monto = ticket_act - ticket_obj
             var_ticket_aa = ((ticket_act - ticket_aa) / ticket_aa * 100) if ticket_aa > 0 else 0.0
 
-            # LÓGICA CORREGIDA: Si la evolución es positiva (el GAP mejoró / se acercó a 0), la flecha es VERDE 🟢 ▲
             if evol_gap_monto >= 0:
                 flecha_monto = ' <span style="color:#16A34A; font-weight:800;">▲</span>'
             else:
