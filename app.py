@@ -307,27 +307,20 @@ st.sidebar.header("🎯 Metas Comerciales")
 meta_ticket_pct = st.sidebar.number_input("Meta Crecimiento Ticket Promedio (%):", value=10.0, step=0.5, format="%.1f")
 
 # -----------------------------------------------------------------------------
-# POP-UP LIMPIO Y DIRECTO (SOLO TABLA DE TIENDAS Y AVANCE DE GAP)
+# POP-UP / DIALOG EXCLUSIVO CON NOMBRE DE TIENDA Y VARIACIÓN PORCENTUAL DE GAP
 # -----------------------------------------------------------------------------
-@st.dialog("🏬 Lista de Tiendas por Escenario", width="large")
+@st.dialog("🏬 Lista de Tiendas por Escenario", width="medium")
 def mostrar_popup_escenario(nombre_escenario, df_filtrado):
     st.markdown(f"### Escenario: **{nombre_escenario}**")
     st.markdown(f"Total Puntos de Venta: **{len(df_filtrado)}**")
     
     if not df_filtrado.empty:
-        tabla_popup = df_filtrado[[
-            'Tienda', 'Supervisor', 'Gerente', 'Cumpl_Act_%', 'GAP_Act', 'Evolucion_GAP_$'
-        ]].copy()
-        
-        tabla_popup.columns = [
-            'Tienda', 'Supervisor', 'Gerente', 'Cumplimiento % (Avance)', 'GAP Presupuesto ($)', 'Diferencia GAP ($)'
-        ]
+        tabla_popup = df_filtrado[['Tienda', 'Var_GAP_%']].copy()
+        tabla_popup.columns = ['Tienda', 'Variación GAP (%) (Cuelgue Ant. vs Nuevo)']
         
         st.dataframe(
-            tabla_popup.sort_values(by='Cumplimiento % (Avance)', ascending=False).style.format({
-                'Cumplimiento % (Avance)': '{:.1f}%',
-                'GAP Presupuesto ($)': '${:,.0f}',
-                'Diferencia GAP ($)': '${:+,.0f}'
+            tabla_popup.sort_values(by='Variación GAP (%) (Cuelgue Ant. vs Nuevo)', ascending=False).style.format({
+                'Variación GAP (%) (Cuelgue Ant. vs Nuevo)': '{:+.1f}%'
             }),
             use_container_width=True,
             height=420
@@ -378,6 +371,10 @@ if file_to_process:
         df_merged['GAP_Ant'] = df_merged['Ventas_Real_Ant'] - df_merged['Ppto_Real_Ant']
         df_merged['GAP_Act'] = df_merged['Ventas_Real_Act'] - df_merged['Ppto_Real_Act']
         df_merged['Evolucion_GAP_$'] = df_merged['GAP_Act'] - df_merged['GAP_Ant']
+        
+        # Variación porcentual entre cuelgues del GAP
+        df_merged['Var_GAP_%'] = (df_merged['Evolucion_GAP_$'] / df_merged['GAP_Ant'].abs().replace(0, 1)) * 100
+
         df_merged['Cumpl_Act_%'] = (df_merged['Ventas_Real_Act'] / df_merged['Ppto_Real_Act'].replace(0, 1)) * 100
 
         # Crecimiento de Ventas Vs Año Anterior (AA)
@@ -496,7 +493,7 @@ if file_to_process:
 
             return "<br><br>".join(analisis)
 
-        # RENDERIZADO INTEGRAL DE KPIS CON TARJETAS DISEÑADAS Y VERSIÓN INTERACTIVA
+        # RENDERIZADO INTEGRAL DE KPIS CON TARJETAS DISEÑADAS Y BOTÓN OJO
         def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
@@ -586,8 +583,8 @@ if file_to_process:
                 )
                 st.plotly_chart(fig_g, use_container_width=True, key=f"gauge_{key_suffix}")
 
-            # SECCIÓN GAP CON BOTONES/TARJETAS INTERACTIVAS REESTRUCTURADAS
-            st.markdown('<div class="gap-section-title">GAP & DISTRIBUCIÓN DE TIENDAS POR ESCENARIO (HAZ CLIC EN CUALQUIER TARJETA PARA VER LISTA)</div>', unsafe_allow_html=True)
+            # SECCIÓN GAP CON TARJETAS Y BOTÓN ÍCONO OJO 👁️
+            st.markdown('<div class="gap-section-title">GAP & DISTRIBUCIÓN DE TIENDAS POR ESCENARIO</div>', unsafe_allow_html=True)
             
             conteo = df_activas['Escenario'].value_counts()
             
@@ -611,7 +608,7 @@ if file_to_process:
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    if st.button("Ver Lista", key=f"btn_esc_{i}_{key_suffix}", use_container_width=True):
+                    if st.button("👁️", key=f"btn_esc_{i}_{key_suffix}", use_container_width=True):
                         df_esc_filtrado = df_activas[df_activas['Escenario'] == nombre_esc]
                         mostrar_popup_escenario(nombre_esc, df_esc_filtrado)
 
