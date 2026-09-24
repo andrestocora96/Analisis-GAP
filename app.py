@@ -53,11 +53,11 @@ st.markdown("""
         background-color: #8C0017 !important;
     }
 
-    /* Tarjetas KPI sobre Fondo Beige */
+    /* Tarjetas KPI Superiores */
     .metric-card {
         background-color: #FFFFFF;
         border-radius: 12px;
-        padding: 15px;
+        padding: 12px 8px;
         box-shadow: 0 4px 12px rgba(90, 80, 70, 0.08);
         border: 1px solid #EFE8DE;
         text-align: center;
@@ -72,8 +72,46 @@ st.markdown("""
     .card-teal { border-left: 5px solid #0D9488; }
     
     .card-title { font-size: 10px; font-weight: 800; color: #524B42; text-transform: uppercase; margin-bottom: 4px; }
-    .card-value { font-size: 20px; font-weight: 800; margin: 2px 0; }
+    .card-value { font-size: 18px; font-weight: 800; margin: 2px 0; }
     .card-sub { font-size: 10px; color: #786F66; font-weight: 600; }
+
+    /* Tarjetas de Escenario Compactas (Parte Inferior) */
+    .scenario-card {
+        background-color: #FFFFFF;
+        border-radius: 8px;
+        padding: 8px 6px;
+        box-shadow: 0 2px 6px rgba(90, 80, 70, 0.05);
+        border: 1px solid #EFE8DE;
+        text-align: center;
+    }
+    .scenario-title {
+        font-size: 9px;
+        font-weight: 800;
+        color: #64748B;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+    }
+    .scenario-value {
+        font-size: 16px;
+        font-weight: 800;
+        margin: 1px 0;
+    }
+    .scenario-sub {
+        font-size: 9px;
+        color: #94A3B8;
+        font-weight: 500;
+    }
+
+    /* Titulo Gris Discreto para Sección GAP Escenarios */
+    .gap-section-title {
+        font-size: 11px;
+        font-weight: 700;
+        color: #94A3B8;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-top: 10px;
+        margin-bottom: 6px;
+    }
 
     /* Caja de Resumen Ejecutivo */
     .ai-box {
@@ -331,7 +369,6 @@ if file_to_process:
             conteo = df_data['Escenario'].value_counts()
             tiendas_verdes = conteo.get('Pasa de Negativo a Positivo 🟢', 0) + conteo.get('Amplió Superávit 🟢', 0) + conteo.get('Mantuvo Superávit 🟢', 0) + conteo.get('Recortó Faltante 🟢', 0)
 
-            # Criterio de Tiendas Foco
             cond_gap = df_data['GAP_Act'] < 0
             cond_tx = df_data['GAP_Tx_AA'] < 0
             cond_tk = df_data['GAP_Ticket_$'] < 0
@@ -377,7 +414,7 @@ if file_to_process:
 
             return "<br><br>".join(analisis)
 
-        # RENDERIZADO INTEGRAL DE KPIS
+        # RENDERIZADO INTEGRAL DE KPIS (REDISEÑADO CON VALORES MÁS LIMPIOS Y BOTONES COMPACTOS)
         def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
@@ -387,18 +424,15 @@ if file_to_process:
             gap_ant = df_scope['GAP_Ant'].sum()
             cumpl_gen = (v_act / ppto_act * 100) if ppto_act > 0 else 0.0
 
-            # Ventas AA y Crecimiento
             v_aa = df_scope['Ventas_AA_Act'].sum()
             diff_v_aa = v_act - v_aa
             var_v_aa = ((v_act - v_aa) / v_aa * 100) if v_aa > 0 else 0.0
 
-            # Transacciones AA
             tx_act = df_scope['Tx_Real_Act'].sum()
             tx_aa = df_scope['Tx_AA_Act'].sum()
             gap_tx_aa = tx_act - tx_aa
             var_tx_aa = ((tx_act - tx_aa) / tx_aa * 100) if tx_aa > 0 else 0.0
 
-            # Ticket Promedio vs Objetivos
             ticket_act = (v_act / tx_act) if tx_act > 0 else 0.0
             ticket_aa = (v_aa / tx_aa) if tx_aa > 0 else 0.0
             ticket_obj = ticket_aa * (1 + (meta_ticket_pct / 100.0))
@@ -470,17 +504,17 @@ if file_to_process:
                 )
                 st.plotly_chart(fig_g, use_container_width=True, key=f"gauge_{key_suffix}")
 
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("<h4 style='text-align:left; color:#423B33; font-size:13px; font-weight:800;'>🏬 ESTADO DE TIENDAS POR ESCENARIO</h4>", unsafe_allow_html=True)
+            # SECCIÓN GAP COMPACTA CON TÍTULO DISCRETO
+            st.markdown('<div class="gap-section-title">GAP & DISTRIBUCIÓN DE TIENDAS POR ESCENARIO</div>', unsafe_allow_html=True)
             
             conteo = df_activas['Escenario'].value_counts()
             e1, e2, e3, e4, e5, e6 = st.columns(6)
-            with e1: st.markdown(f"""<div class="metric-card card-green"><div class="card-title">PASA A POSITIVO</div><div class="card-value" style="color:#16A34A;">{conteo.get('Pasa de Negativo a Positivo 🟢', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
-            with e2: st.markdown(f"""<div class="metric-card card-green"><div class="card-title">AMPLIÓ SUPERÁVIT</div><div class="card-value" style="color:#16A34A;">{conteo.get('Amplió Superávit 🟢', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
-            with e3: st.markdown(f"""<div class="metric-card card-green"><div class="card-title">MANTUVO SUPERÁVIT</div><div class="card-value" style="color:#16A34A;">{conteo.get('Mantuvo Superávit 🟢', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
-            with e4: st.markdown(f"""<div class="metric-card card-green"><div class="card-title">RECORTÓ FALTANTE</div><div class="card-value" style="color:#16A34A;">{conteo.get('Recortó Faltante 🟢', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
-            with e5: st.markdown(f"""<div class="metric-card card-yellow"><div class="card-title">MANTUVO FALTANTE</div><div class="card-value" style="color:#D97706;">{conteo.get('Mantuvo Faltante 🟡', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
-            with e6: st.markdown(f"""<div class="metric-card card-red"><div class="card-title">AUMENTÓ FALTANTE</div><div class="card-value" style="color:#DC2626;">{conteo.get('Aumentó Faltante 🔴', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
+            with e1: st.markdown(f"""<div class="scenario-card" style="border-left: 3px solid #16A34A;"><div class="scenario-title">PASA A POSITIVO</div><div class="scenario-value" style="color:#16A34A;">{conteo.get('Pasa de Negativo a Positivo 🟢', 0)}</div><div class="scenario-sub">Tiendas</div></div>""", unsafe_allow_html=True)
+            with e2: st.markdown(f"""<div class="scenario-card" style="border-left: 3px solid #16A34A;"><div class="scenario-title">AMPLIÓ SUPERÁVIT</div><div class="scenario-value" style="color:#16A34A;">{conteo.get('Amplió Superávit 🟢', 0)}</div><div class="scenario-sub">Tiendas</div></div>""", unsafe_allow_html=True)
+            with e3: st.markdown(f"""<div class="scenario-card" style="border-left: 3px solid #16A34A;"><div class="scenario-title">MANTUVO SUPERÁVIT</div><div class="scenario-value" style="color:#16A34A;">{conteo.get('Mantuvo Superávit 🟢', 0)}</div><div class="scenario-sub">Tiendas</div></div>""", unsafe_allow_html=True)
+            with e4: st.markdown(f"""<div class="scenario-card" style="border-left: 3px solid #16A34A;"><div class="scenario-title">RECORTÓ FALTANTE</div><div class="scenario-value" style="color:#16A34A;">{conteo.get('Recortó Faltante 🟢', 0)}</div><div class="scenario-sub">Tiendas</div></div>""", unsafe_allow_html=True)
+            with e5: st.markdown(f"""<div class="scenario-card" style="border-left: 3px solid #D97706;"><div class="scenario-title">MANTUVO FALTANTE</div><div class="scenario-value" style="color:#D97706;">{conteo.get('Mantuvo Faltante 🟡', 0)}</div><div class="scenario-sub">Tiendas</div></div>""", unsafe_allow_html=True)
+            with e6: st.markdown(f"""<div class="scenario-card" style="border-left: 3px solid #DC2626;"><div class="scenario-title">AUMENTÓ FALTANTE</div><div class="scenario-value" style="color:#DC2626;">{conteo.get('Aumentó Faltante 🔴', 0)}</div><div class="scenario-sub">Tiendas</div></div>""", unsafe_allow_html=True)
 
         tab1, tab2 = st.tabs(["📊 Informe Gerencial GAP", "🔍 Análisis por Gerencia"])
 
@@ -565,7 +599,13 @@ if file_to_process:
                     text_auto='.1f'
                 )
                 fig_sup.update_traces(texttemplate='%{x:.1f}%', textposition='outside')
-                fig_sup.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                fig_sup.update_layout(
+                    height=350, 
+                    margin=dict(r=80, l=10, t=30, b=10),
+                    paper_bgcolor='rgba(0,0,0,0)', 
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    xaxis=dict(cliponaxis=False)
+                )
                 st.plotly_chart(fig_sup, use_container_width=True, key="fig_sup_chart")
                 
             with col_g2:
@@ -577,7 +617,13 @@ if file_to_process:
                     text_auto='.1f'
                 )
                 fig_tx.update_traces(texttemplate='%{x:+.1f}%', textposition='outside')
-                fig_tx.update_layout(height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                fig_tx.update_layout(
+                    height=350, 
+                    margin=dict(r=80, l=10, t=30, b=10),
+                    paper_bgcolor='rgba(0,0,0,0)', 
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    xaxis=dict(cliponaxis=False)
+                )
                 st.plotly_chart(fig_tx, use_container_width=True, key="fig_tx_chart")
 
             st.markdown("---")
@@ -599,10 +645,15 @@ if file_to_process:
                     },
                     orientation='h', title="VARIACIÓN DE GAP DE PPTO ($) POR TIENDA"
                 )
-                fig_tiendas.update_layout(height=max(420, len(df_tab2) * 22), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                fig_tiendas.update_layout(
+                    height=max(420, len(df_tab2) * 22), 
+                    margin=dict(r=50, l=10, t=30, b=10),
+                    paper_bgcolor='rgba(0,0,0,0)', 
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    xaxis=dict(cliponaxis=False)
+                )
                 st.plotly_chart(fig_tiendas, use_container_width=True, key="fig_tiendas_chart")
 
-            # GRÁFICA HORIZONTAL EN PORCENTAJE (%) DE TRANSACCIONES POR TIENDA (FOTO 1 Y 2 CORREGIDAS)
             with col_bar2:
                 fig_tx_tiendas = px.bar(
                     df_tab2.sort_values(by='Var_Tx_AA_%', ascending=True),
@@ -611,7 +662,13 @@ if file_to_process:
                     orientation='h', title="VARIACIÓN DE TRANSACCIONES VS AÑO ANTERIOR (%) POR TIENDA"
                 )
                 fig_tx_tiendas.update_traces(texttemplate='%{x:+.1f}%', textposition='outside')
-                fig_tx_tiendas.update_layout(height=max(420, len(df_tab2) * 22), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                fig_tx_tiendas.update_layout(
+                    height=max(420, len(df_tab2) * 22), 
+                    margin=dict(r=80, l=10, t=30, b=10),
+                    paper_bgcolor='rgba(0,0,0,0)', 
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    xaxis=dict(cliponaxis=False)
+                )
                 st.plotly_chart(fig_tx_tiendas, use_container_width=True, key="fig_tx_tiendas_chart")
 
             st.markdown("#### 📋 TABLA DE CAUSA RAÍZ: VENTAS, GAP TRANSACCIONES (AA) Y EVALUACIÓN DE TICKET")
