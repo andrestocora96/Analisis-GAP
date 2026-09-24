@@ -110,8 +110,8 @@ st.markdown("""
 # CABECERA
 st.markdown("""
 <div class="jv-header">
-    <h1>INFORME GERENCIAL GAP VS PRESUPUESTO & ANÁLISIS DE TRÁFICO</h1>
-    <p>Control Integrado de Ventas, Presupuesto, Transacciones y Ticket Promedio</p>
+    <h1>INFORME GERENCIAL GAP VS PRESUPUESTO & ANÁLISIS DE TRÁFICO (AA)</h1>
+    <p>Control Integrado de Ventas, Presupuesto, GAP Transacciones Interanual y Meta de Ticket Promedio</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -148,12 +148,19 @@ def cargar_datos(file):
         df['Ventas_Real'] = df['Ventas Act'].apply(limpiar_monto)
         df['Ppto_Real'] = df['Ppto'].apply(limpiar_monto)
         
-        # Extracción de Transacciones si existen en la hoja
-        col_tx = [c for c in df.columns if 'Transaccion' in c or 'Tx' in c]
-        if col_tx:
-            df['Tx_Real'] = pd.to_numeric(df[col_tx[0]], errors='coerce').fillna(0)
+        # Extracción de Ventas AA si existen
+        col_v_aa = [c for c in df.columns if 'Venta' in c and ('AA' in c or 'Ant' in c or 'Anterior' in c)]
+        if col_v_aa:
+            df['Ventas_AA'] = df[col_v_aa[0]].apply(limpiar_monto)
         else:
-            df['Tx_Real'] = 0.0
+            df['Ventas_AA'] = 0.0
+
+        # Extracción de Transacciones Actuales y Transacciones AA
+        col_tx_act = [c for c in df.columns if ('Transacc' in c or 'Tx' in c) and ('AA' not in c and 'Ant' not in c)]
+        col_tx_aa = [c for c in df.columns if ('Transacc' in c or 'Tx' in c) and ('AA' in c or 'Ant' in c or 'Anterior' in c)]
+        
+        df['Tx_Real'] = pd.to_numeric(df[col_tx_act[0]], errors='coerce').fillna(0) if col_tx_act else 0.0
+        df['Tx_AA'] = pd.to_numeric(df[col_tx_aa[0]], errors='coerce').fillna(0) if col_tx_aa else 0.0
             
         dfs.append(df)
         
@@ -169,6 +176,11 @@ def cargar_datos(file):
 st.sidebar.header("📁 Configuración de Datos")
 uploaded_file = st.sidebar.file_uploader("Cargar ANALISIS GAP.xlsx", type=['xlsx'])
 
+# PARÁMETRO CONFIGURABLE DE META TICKET PROMEDIO
+st.sidebar.markdown("---")
+st.sidebar.header("🎯 Metas Comerciales")
+meta_ticket_pct = st.sidebar.number_input("Meta Crecimiento Ticket Promedio (%):", value=10.0, step=0.5, format="%.1f")
+
 if uploaded_file:
     df_tot, lista_ciclos = cargar_datos(uploaded_file)
     
@@ -179,11 +191,11 @@ if uploaded_file:
         df_act = df_tot[df_tot['Ciclo'] == c_act].copy()
         df_ant = df_tot[df_tot['Ciclo'] == c_ant].copy()
         
-        cols_act = ['Tienda_Clean', 'Tienda', 'Gerente', 'Supervisor', 'Ciudad', 'Segmento', 'Ventas_Real', 'Ppto_Real', 'Tx_Real']
+        cols_act = ['Tienda_Clean', 'Tienda', 'Gerente', 'Supervisor', 'Ciudad', 'Segmento', 'Ventas_Real', 'Ppto_Real', 'Ventas_AA', 'Tx_Real', 'Tx_AA']
         for c in ['Pareto', 'Comparable ', 'Comparable']:
             if c in df_act.columns and c not in cols_act: cols_act.append(c)
                 
-        cols_ant = ['Tienda_Clean', 'Tienda', 'Gerente', 'Supervisor', 'Ventas_Real', 'Ppto_Real', 'Tx_Real']
+        cols_ant = ['Tienda_Clean', 'Tienda', 'Gerente', 'Supervisor', 'Ventas_Real', 'Ppto_Real', 'Ventas_AA', 'Tx_Real', 'Tx_AA']
         for c in ['Pareto', 'Comparable ', 'Comparable']:
             if c in df_ant.columns and c not in cols_ant: cols_ant.append(c)
 
@@ -206,7 +218,7 @@ if uploaded_file:
             if c in df_merged.columns: comp_col = c; break
         df_merged['Comparable_Val'] = df_merged[comp_col] if comp_col else 'NO'
             
-        for col in ['Ventas_Real_Act', 'Ppto_Real_Act', 'Ventas_Real_Ant', 'Ppto_Real_Ant', 'Tx_Real_Act', 'Tx_Real_Ant']:
+        for col in ['Ventas_Real_Act', 'Ppto_Real_Act', 'Ventas_Real_Ant', 'Ppto_Real_Ant', 'Ventas_AA_Act', 'Tx_Real_Act', 'Tx_AA_Act']:
             df_merged[col] = df_merged[col].fillna(0.0)
             
         # CÁLCULOS CLAVE
@@ -215,11 +227,18 @@ if uploaded_file:
         df_merged['Evolucion_GAP_$'] = df_merged['GAP_Act'] - df_merged['GAP_Ant']
         df_merged['Cumpl_Act_%'] = (df_merged['Ventas_Real_Act'] / df_merged['Ppto_Real_Act'].replace(0, 1)) * 100
 
-        # Ticket Promedio ($/Tx)
+        # CÁLCULOS DE TRANSACCIONES VS AÑO ANTERIOR (AA)
+        df_merged['GAP_Tx_AA'] = df_merged['Tx_Real_Act'] - df_merged['Tx_AA_Act']
+        df_merged['Var_Tx_AA_%'] = ((df_merged['Tx_Real_Act'] - df_merged['Tx_AA_Act']) / df_merged['Tx_AA_Act'].replace(0, 1)) * 100
+
+        # CÁLCULOS DE TICKET PROMEDIO Y EVALUACIÓN FRENTE A META (10%)
         df_merged['Ticket_Act'] = df_merged['Ventas_Real_Act'] / df_merged['Tx_Real_Act'].replace(0, 1)
-        df_merged['Ticket_Ant'] = df_merged['Ventas_Real_Ant'] / df_merged['Tx_Real_Ant'].replace(0, 1)
-        df_merged['Var_Tx_%'] = ((df_merged['Tx_Real_Act'] - df_merged['Tx_Real_Ant']) / df_merged['Tx_Real_Ant'].replace(0, 1)) * 100
-        df_merged['Var_Ticket_%'] = ((df_merged['Ticket_Act'] - df_merged['Ticket_Ant']) / df_merged['Ticket_Ant'].replace(0, 1)) * 100
+        df_merged['Ticket_AA'] = df_merged['Ventas_AA_Act'] / df_merged['Tx_AA_Act'].replace(0, 1)
+        
+        # Meta Ticket = Ticket AA * (1 + meta%)
+        df_merged['Ticket_Objetivo'] = df_merged['Ticket_AA'] * (1 + (meta_ticket_pct / 100.0))
+        df_merged['GAP_Ticket_$'] = df_merged['Ticket_Act'] - df_merged['Ticket_Objetivo']
+        df_merged['Var_Ticket_AA_%'] = ((df_merged['Ticket_Act'] - df_merged['Ticket_AA']) / df_merged['Ticket_AA'].replace(0, 1)) * 100
 
         def clasificar_escenario(row):
             g_ant, g_act, diff = row['GAP_Ant'], row['GAP_Act'], row['Evolucion_GAP_$']
@@ -248,7 +267,7 @@ if uploaded_file:
         if solo_pareto: df_base = df_base[df_base['Pareto'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
         if solo_comparable: df_base = df_base[df_base['Comparable_Val'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
 
-        # RENDERIZADO INTEGRAL DE KPIS (VENTAS + TRÁFICO)
+        # RENDERIZADO INTEGRAL DE KPIS (VENTAS + TRÁFICO AA + TICKET META)
         def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
@@ -256,17 +275,21 @@ if uploaded_file:
             ppto_act = df_scope['Ppto_Real_Act'].sum()
             gap_act = df_scope['GAP_Act'].sum()
             gap_ant = df_scope['GAP_Ant'].sum()
-            evol_gap = df_scope['Evolucion_GAP_$'].sum()
             cumpl_gen = (v_act / ppto_act * 100) if ppto_act > 0 else 0.0
 
-            # Métricas de Transacciones y Ticket
+            # Transacciones AA
             tx_act = df_scope['Tx_Real_Act'].sum()
-            tx_ant = df_scope['Tx_Real_Ant'].sum()
-            var_tx = ((tx_act - tx_ant) / tx_ant * 100) if tx_ant > 0 else 0.0
-            
+            tx_aa = df_scope['Tx_AA_Act'].sum()
+            gap_tx_aa = tx_act - tx_aa
+            var_tx_aa = ((tx_act - tx_aa) / tx_aa * 100) if tx_aa > 0 else 0.0
+
+            # Ticket Promedio vs Objetivos
+            v_aa = df_scope['Ventas_AA_Act'].sum()
             ticket_act = (v_act / tx_act) if tx_act > 0 else 0.0
-            ticket_ant = (df_scope['Ventas_Real_Ant'].sum() / tx_ant) if tx_ant > 0 else 0.0
-            var_ticket = ((ticket_act - ticket_ant) / ticket_ant * 100) if ticket_ant > 0 else 0.0
+            ticket_aa = (v_aa / tx_aa) if tx_aa > 0 else 0.0
+            ticket_obj = ticket_aa * (1 + (meta_ticket_pct / 100.0))
+            gap_ticket_monto = ticket_act - ticket_obj
+            var_ticket_aa = ((ticket_act - ticket_aa) / ticket_aa * 100) if ticket_aa > 0 else 0.0
 
             k1, k2, k3, k4, k5 = st.columns([1, 1, 1, 1.2, 1])
             with k1:
@@ -287,21 +310,21 @@ if uploaded_file:
                 </div>
                 """, unsafe_allow_html=True)
             with k3:
-                col_tx_c = "#16A34A" if var_tx >= 0 else "#DC2626"
+                col_tx_c = "#16A34A" if gap_tx_aa >= 0 else "#DC2626"
                 st.markdown(f"""
                 <div class="metric-card card-purple">
-                    <div class="card-title">TRÁFICO (TRANSACCIONES)</div>
-                    <div class="card-value" style="color:#9333EA;">{tx_act:,.0f}</div>
-                    <div class="card-sub" style="color:{col_tx_c}; font-weight:bold;">Var: {var_tx:+.1f}% vs Sem Ant</div>
+                    <div class="card-title">GAP TRANSACCIONES (VS AA)</div>
+                    <div class="card-value" style="color:{col_tx_c};">{gap_tx_aa:+,.0f} Tx</div>
+                    <div class="card-sub" style="color:{col_tx_c}; font-weight:bold;">Var: {var_tx_aa:+.1f}% vs AA</div>
                 </div>
                 """, unsafe_allow_html=True)
             with k4:
-                col_tk_c = "#16A34A" if var_ticket >= 0 else "#DC2626"
+                col_tk_c = "#16A34A" if gap_ticket_monto >= 0 else "#DC2626"
                 st.markdown(f"""
                 <div class="metric-card card-amber">
-                    <div class="card-title">TICKET PROMEDIO ($/TX)</div>
-                    <div class="card-value" style="color:#D97706;">${ticket_act:,.0f}</div>
-                    <div class="card-sub" style="color:{col_tk_c}; font-weight:bold;">Var: {var_ticket:+.1f}% vs Sem Ant</div>
+                    <div class="card-title">TICKET PROMEDIO (${meta_ticket_pct:.0f}% META)</div>
+                    <div class="card-value" style="color:{col_tk_c};">${ticket_act:,.0f}</div>
+                    <div class="card-sub" style="color:{col_tk_c}; font-weight:bold;">GAP Meta: ${gap_ticket_monto:+,.0f} ({var_ticket_aa:+.1f}% vs AA)</div>
                 </div>
                 """, unsafe_allow_html=True)
             with k5:
@@ -373,17 +396,17 @@ if uploaded_file:
             render_kpi_block(df_tab2, key_suffix="tab2_kpis")
 
             st.markdown("---")
-            st.markdown("### 👔 CUMPLIMIENTO INTERACTIVO Y ANÁLISIS DE TRÁFICO POR SUPERVISOR")
+            st.markdown("### 👔 CUMPLIMIENTO INTERACTIVO Y GAP DE TRANSACCIONES POR SUPERVISOR")
             
             df_sup_agg = df_tab2.groupby(['Supervisor', 'Gerente']).agg(
                 Ventas_Act=('Ventas_Real_Act', 'sum'),
                 Ppto_Act=('Ppto_Real_Act', 'sum'),
                 Tx_Act=('Tx_Real_Act', 'sum'),
-                Tx_Ant=('Tx_Real_Ant', 'sum')
+                Tx_AA=('Tx_AA_Act', 'sum')
             ).reset_index()
             
             df_sup_agg['Cumpl_%'] = (df_sup_agg['Ventas_Act'] / df_sup_agg['Ppto_Act'].replace(0, 1)) * 100
-            df_sup_agg['Var_Tx_%'] = ((df_sup_agg['Tx_Act'] - df_sup_agg['Tx_Ant']) / df_sup_agg['Tx_Ant'].replace(0, 1)) * 100
+            df_sup_agg['GAP_Tx_AA'] = df_sup_agg['Tx_Act'] - df_sup_agg['Tx_AA']
 
             col_g1, col_g2 = st.columns(2)
             with col_g1:
@@ -398,10 +421,10 @@ if uploaded_file:
                 
             with col_g2:
                 fig_tx = px.bar(
-                    df_sup_agg.sort_values(by='Var_Tx_%', ascending=True),
-                    y='Supervisor', x='Var_Tx_%', color='Var_Tx_%',
+                    df_sup_agg.sort_values(by='GAP_Tx_AA', ascending=True),
+                    y='Supervisor', x='GAP_Tx_AA', color='GAP_Tx_AA',
                     color_continuous_scale=['#DC2626', '#EAB308', '#2563EB'],
-                    orientation='h', title="VARIACIÓN DE TRÁFICO / TRANSACCIONES (%)", text_auto='.1f%'
+                    orientation='h', title="GAP DE TRANSACCIONES VS AÑO ANTERIOR (Tx)", text_auto=',.0f'
                 )
                 fig_tx.update_layout(height=350)
                 st.plotly_chart(fig_tx, use_container_width=True, key="fig_tx_chart")
@@ -425,16 +448,16 @@ if uploaded_file:
             fig_tiendas.update_layout(height=max(400, len(df_tab2) * 22))
             st.plotly_chart(fig_tiendas, use_container_width=True, key="fig_tiendas_chart")
 
-            # TABLA DE CAUSA RAÍZ
-            st.markdown("#### 📋 TABLA DE CAUSA RAÍZ: VENTAS, TRÁFICO Y TICKET")
+            # TABLA DE CAUSA RAÍZ INTERANUAL
+            st.markdown("#### 📋 TABLA DE CAUSA RAÍZ: VENTAS, GAP TRANSACCIONES (AA) Y EVALUACIÓN DE TICKET")
             tabla_causa = df_tab2.sort_values(by='Cumpl_Act_%', ascending=False)[[
                 'Tienda', 'Gerente', 'Supervisor', 'Cumpl_Act_%', 'GAP_Act', 'Evolucion_GAP_$', 
-                'Tx_Real_Act', 'Var_Tx_%', 'Ticket_Act', 'Var_Ticket_%', 'Escenario'
+                'Tx_Real_Act', 'GAP_Tx_AA', 'Ticket_Act', 'GAP_Ticket_$', 'Escenario'
             ]].copy()
             
             tabla_causa.columns = [
                 'Tienda', 'Gerente', 'Supervisor', 'Cumpl %', 'GAP Act ($)', 'Evol GAP ($)',
-                'Transacciones (Tx)', 'Var Tx %', 'Ticket Prom ($)', 'Var Ticket %', 'Escenario'
+                'Tx Act', 'GAP Tx (VS AA)', 'Ticket Act ($)', f'GAP Ticket vs {meta_ticket_pct:.0f}% ($)', 'Escenario'
             ]
             
             st.dataframe(
@@ -442,10 +465,10 @@ if uploaded_file:
                     'Cumpl %': '{:.1f}%',
                     'GAP Act ($)': '${:,.0f}',
                     'Evol GAP ($)': '${:+,.0f}',
-                    'Transacciones (Tx)': '{:,.0f}',
-                    'Var Tx %': '{:+.1f}%',
-                    'Ticket Prom ($)': '${:,.0f}',
-                    'Var Ticket %': '{:+.1f}%'
+                    'Tx Act': '{:,.0f}',
+                    'GAP Tx (VS AA)': '{:+,.0f}',
+                    'Ticket Act ($)': '${:,.0f}',
+                    f'GAP Ticket vs {meta_ticket_pct:.0f}% ($)': '${:+,.0f}'
                 }),
                 use_container_width=True
             )
