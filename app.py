@@ -560,7 +560,7 @@ if file_to_process:
                     for _, row_f in df_foco_reg.iterrows():
                         txt_ger += f"<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <b>{row_f['Tienda']}</b> (Sup. {row_f['Supervisor']}): Cumpl. <b>{row_f['Cumpl_Act_%']:.1f}%</b> | GAP: <b>${row_f['GAP_Act']:,.0f}</b> | Var Tx AA: <b>{row_f['Var_Tx_AA_%']:+.1f}%</b> | Ticket: <b>${row_f['Ticket_Act']:,.0f}</b>"
                 else:
-                    txt_ger += "<br>&nbsp;&nbsp;&nbsp;&nbsp;✅ <i>Sin tiendas que reúnan simultáneamente las 3 condiciones de alerta crítica.</i>"
+                    txt_ger += "<br>&nbsp;&nbsp;&nbsp;&nbsp;✅ <i>Sin tiendas que reúnan simultáneamente las 3 conditions de alerta crítica.</i>"
                 analisis.append(txt_ger)
 
             return "<br><br>".join(analisis)
@@ -603,9 +603,9 @@ if file_to_process:
             flecha_tx = ' <span style="color:#16A34A; font-weight:800;">▲</span>' if evol_tx_monto >= 0 else ' <span style="color:#DC2626; font-weight:800;">▼</span>'
             flecha_tk = ' <span style="color:#16A34A; font-weight:800;">▲</span>' if evol_ticket_monto >= 0 else ' <span style="color:#DC2626; font-weight:800;">▼</span>'
 
-            # --- FILA 1: COMERCIAL Y CUMPLIMIENTO ---
+            # --- FILA 1: COMERCIAL Y CUMPLIMIENTO CON LA TARJETA DE TRANSACCIONES ---
             st.markdown('<div class="section-kpi-title">📈 DESEMPEÑO COMERCIAL & VENTAS</div>', unsafe_allow_html=True)
-            r1_1, r1_2, r1_3, r1_4 = st.columns([1, 1.2, 1.2, 1])
+            r1_1, r1_2, r1_3, r1_4, r1_5 = st.columns([1, 1.1, 1.1, 1.1, 0.9])
             
             with r1_1:
                 st.markdown(f"""
@@ -625,6 +625,15 @@ if file_to_process:
                 </div>
                 """, unsafe_allow_html=True)
             with r1_3:
+                col_tx_c = "#16A34A" if gap_tx_act >= 0 else "#DC2626"
+                st.markdown(f"""
+                <div class="metric-card card-purple">
+                    <div class="card-title">TRANSACCIONES (VS AA)</div>
+                    <div class="card-value" style="color:{col_tx_c};">{gap_tx_act:+,.0f} Tx</div>
+                    <div class="card-sub" style="color:{col_tx_c}; font-weight:bold;">Var: {var_tx_aa:+.1f}% vs AA</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with r1_4:
                 col_tk_c = "#16A34A" if gap_ticket_monto >= 0 else "#DC2626"
                 st.markdown(f"""
                 <div class="metric-card card-amber">
@@ -633,7 +642,7 @@ if file_to_process:
                     <div class="card-sub" style="color:{col_tk_c}; font-weight:bold;">GAP Meta: ${gap_ticket_monto:+,.0f} ({var_ticket_aa:+.1f}% vs AA)</div>
                 </div>
                 """, unsafe_allow_html=True)
-            with r1_4:
+            with r1_5:
                 fig_g = go.Figure(go.Indicator(
                     mode = "gauge+number", value = cumpl_gen,
                     number = {'suffix': "%", 'valueformat': ".1f"},
