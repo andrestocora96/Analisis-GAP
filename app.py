@@ -538,7 +538,7 @@ if file_to_process:
 
             return "<br><br>".join(analisis)
 
-        # RENDERIZADO DE KPIS CON FLECHAS EN EL VALOR PRINCIPAL
+        # RENDERIZADO DE KPIS CON FLECHA DE TENDENCIA EN COLOR VERDE SI MEJORÓ
         def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
@@ -564,11 +564,11 @@ if file_to_process:
             gap_ticket_monto = ticket_act - ticket_obj
             var_ticket_aa = ((ticket_act - ticket_aa) / ticket_aa * 100) if ticket_aa > 0 else 0.0
 
-            # SIMBOLO Y FLECHA EN EL VALOR PRINCIPAL EN PESOS DEL GAP
+            # LÓGICA CORREGIDA: Si la evolución es positiva (el GAP mejoró / se acercó a 0), la flecha es VERDE 🟢 ▲
             if evol_gap_monto >= 0:
-                flecha_monto = " ▲"
+                flecha_monto = ' <span style="color:#16A34A; font-weight:800;">▲</span>'
             else:
-                flecha_monto = " ▼"
+                flecha_monto = ' <span style="color:#DC2626; font-weight:800;">▼</span>'
 
             k1, k2, k3, k4, k5, k6 = st.columns([1, 1, 1, 1, 1.2, 1])
             with k1:
