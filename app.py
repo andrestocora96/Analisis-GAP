@@ -75,16 +75,17 @@ st.markdown("""
     .card-value { font-size: 18px; font-weight: 800; margin: 2px 0; }
     .card-sub { font-size: 10px; color: #786F66; font-weight: 600; }
 
-    /* CONTENEDOR DE TARJETA INTERACTIVA Y BOTÓN */
+    /* CONTENEDOR DE TARJETA INTERACTIVA */
     .esc-container {
         position: relative;
         background-color: #FFFFFF;
         border-radius: 10px;
-        padding: 10px;
+        padding: 8px;
         text-align: center;
         box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
         border: 1px solid #E2E8F0;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
+        margin-bottom: 6px;
     }
     .esc-container:hover {
         transform: translateY(-2px);
@@ -99,21 +100,39 @@ st.markdown("""
         font-weight: 800;
         color: #475569;
         text-transform: uppercase;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
         height: 24px;
         display: flex;
         align-items: center;
         justify-content: center;
     }
     .esc-count {
-        font-size: 20px;
+        font-size: 19px;
         font-weight: 800;
-        margin: 2px 0;
+        margin: 1px 0;
     }
     .esc-sub {
         font-size: 10px;
         color: #94A3B8;
         font-weight: 600;
+    }
+
+    /* BOTÓN COMPACTO DE BAJA ALTURA */
+    div[data-testid="stColumn"] div[data-testid="stButton"] > button {
+        padding: 2px 8px !important;
+        height: 28px !important;
+        min-height: 28px !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        border-radius: 6px !important;
+        background-color: #FFFFFF !important;
+        border: 1px solid #CBD5E1 !important;
+        color: #475569 !important;
+    }
+    div[data-testid="stColumn"] div[data-testid="stButton"] > button:hover {
+        background-color: #F8FAFC !important;
+        border-color: #94A3B8 !important;
+        color: #0F172A !important;
     }
 
     /* Titulo Gris Discreto para Sección GAP Escenarios */
@@ -307,7 +326,7 @@ st.sidebar.header("🎯 Metas Comerciales")
 meta_ticket_pct = st.sidebar.number_input("Meta Crecimiento Ticket Promedio (%):", value=10.0, step=0.5, format="%.1f")
 
 # -----------------------------------------------------------------------------
-# POP-UP / DIALOG EXCLUSIVO CON NOMBRE DE TIENDA Y VARIACIÓN PORCENTUAL DE GAP
+# POP-UP EXCLUSIVO CON TIENDA Y VALOR DE EVOLUCIÓN DE GAP ($)
 # -----------------------------------------------------------------------------
 @st.dialog("🏬 Lista de Tiendas por Escenario", width="medium")
 def mostrar_popup_escenario(nombre_escenario, df_filtrado):
@@ -315,15 +334,15 @@ def mostrar_popup_escenario(nombre_escenario, df_filtrado):
     st.markdown(f"Total Puntos de Venta: **{len(df_filtrado)}**")
     
     if not df_filtrado.empty:
-        tabla_popup = df_filtrado[['Tienda', 'Var_GAP_%']].copy()
-        tabla_popup.columns = ['Tienda', 'Variación GAP (%) (Cuelgue Ant. vs Nuevo)']
+        tabla_popup = df_filtrado[['Tienda', 'Evolucion_GAP_$']].copy()
+        tabla_popup.columns = ['Tienda', 'Evolución GAP ($) (Cuelgue Ant. vs Nuevo)']
         
         st.dataframe(
-            tabla_popup.sort_values(by='Variación GAP (%) (Cuelgue Ant. vs Nuevo)', ascending=False).style.format({
-                'Variación GAP (%) (Cuelgue Ant. vs Nuevo)': '{:+.1f}%'
+            tabla_popup.sort_values(by='Evolución GAP ($) (Cuelgue Ant. vs Nuevo)', ascending=False).style.format({
+                'Evolución GAP ($) (Cuelgue Ant. vs Nuevo)': '${:+,.0f}'
             }),
             use_container_width=True,
-            height=420
+            height=400
         )
     else:
         st.info("No hay tiendas registradas bajo este escenario.")
@@ -372,9 +391,6 @@ if file_to_process:
         df_merged['GAP_Act'] = df_merged['Ventas_Real_Act'] - df_merged['Ppto_Real_Act']
         df_merged['Evolucion_GAP_$'] = df_merged['GAP_Act'] - df_merged['GAP_Ant']
         
-        # Variación porcentual entre cuelgues del GAP
-        df_merged['Var_GAP_%'] = (df_merged['Evolucion_GAP_$'] / df_merged['GAP_Ant'].abs().replace(0, 1)) * 100
-
         df_merged['Cumpl_Act_%'] = (df_merged['Ventas_Real_Act'] / df_merged['Ppto_Real_Act'].replace(0, 1)) * 100
 
         # Crecimiento de Ventas Vs Año Anterior (AA)
@@ -493,7 +509,7 @@ if file_to_process:
 
             return "<br><br>".join(analisis)
 
-        # RENDERIZADO INTEGRAL DE KPIS CON TARJETAS DISEÑADAS Y BOTÓN OJO
+        # RENDERIZADO INTEGRAL DE KPIS CON TARJETAS DISEÑADAS Y BOTÓN DE VER DETALLE COMPACTO
         def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
@@ -583,7 +599,7 @@ if file_to_process:
                 )
                 st.plotly_chart(fig_g, use_container_width=True, key=f"gauge_{key_suffix}")
 
-            # SECCIÓN GAP CON TARJETAS Y BOTÓN ÍCONO OJO 👁️
+            # SECCIÓN GAP CON TARJETAS Y BOTÓN PEQUEÑO "VER DETALLE"
             st.markdown('<div class="gap-section-title">GAP & DISTRIBUCIÓN DE TIENDAS POR ESCENARIO</div>', unsafe_allow_html=True)
             
             conteo = df_activas['Escenario'].value_counts()
@@ -608,7 +624,7 @@ if file_to_process:
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    if st.button("👁️", key=f"btn_esc_{i}_{key_suffix}", use_container_width=True):
+                    if st.button("Ver detalle", key=f"btn_esc_{i}_{key_suffix}", use_container_width=True):
                         df_esc_filtrado = df_activas[df_activas['Escenario'] == nombre_esc]
                         mostrar_popup_escenario(nombre_esc, df_esc_filtrado)
 
