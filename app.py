@@ -10,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 🎨 PALETA WARM CORPORATE / BEIGE PREMIUM JUAN VALDEZ & ESTILOS DE TARJETAS Y BOTONES
+# 🎨 PALETA WARM CORPORATE / BEIGE PREMIUM JUAN VALDEZ & ESTILOS
 st.markdown("""
 <style>
     /* Fondo General Crema / Beige Cálido */
@@ -75,7 +75,7 @@ st.markdown("""
     .card-value { font-size: 18px; font-weight: 800; margin: 2px 0; }
     .card-sub { font-size: 10px; color: #786F66; font-weight: 600; }
 
-    /* CONTENEDOR DE TARJETA DE ESCENARIO ORIGINAL */
+    /* CONTENEDOR DE TARJETA DE ESCENARIO */
     .esc-container {
         position: relative;
         background-color: #FFFFFF;
@@ -335,27 +335,20 @@ st.sidebar.header("🎯 Metas Comerciales")
 meta_ticket_pct = st.sidebar.number_input("Meta Crecimiento Ticket Promedio (%):", value=10.0, step=0.5, format="%.1f")
 
 # -----------------------------------------------------------------------------
-# POP-UP CON LISTADO COMPLETO DE TIENDAS Y DETALLE DE GAP
+# POP-UP EXCLUSIVO: ÚNICAMENTE TIENDA Y EVOLUCIÓN DE GAP ($)
 # -----------------------------------------------------------------------------
-@st.dialog("🏬 Lista Detallada de Tiendas por Escenario", width="large")
+@st.dialog("🏬 Lista de Tiendas por Escenario", width="medium")
 def mostrar_popup_escenario(nombre_escenario, df_filtrado):
     st.markdown(f"### Escenario: **{nombre_escenario}**")
     st.markdown(f"Total Puntos de Venta: **{len(df_filtrado)}**")
     
     if not df_filtrado.empty:
-        tabla_popup = df_filtrado[[
-            'Tienda', 'Supervisor', 'Gerente', 'Cumpl_Act_%', 'GAP_Act', 'Evolucion_GAP_$'
-        ]].copy()
-        
-        tabla_popup.columns = [
-            'Tienda', 'Supervisor', 'Gerente', 'Cumpl. %', 'GAP Presupuesto ($)', 'Evolución GAP ($)'
-        ]
+        tabla_popup = df_filtrado[['Tienda', 'Evolucion_GAP_$']].copy()
+        tabla_popup.columns = ['Tienda', 'Evolución GAP ($) (Cuelgue Ant. vs Nuevo)']
         
         st.dataframe(
-            tabla_popup.sort_values(by='GAP Presupuesto ($)', ascending=True).style.format({
-                'Cumpl. %': '{:.1f}%',
-                'GAP Presupuesto ($)': '${:,.0f}',
-                'Evolución GAP ($)': '${:+,.0f}'
+            tabla_popup.sort_values(by='Evolución GAP ($) (Cuelgue Ant. vs Nuevo)', ascending=False).style.format({
+                'Evolución GAP ($) (Cuelgue Ant. vs Nuevo)': '${:+,.0f}'
             }),
             use_container_width=True,
             height=400
@@ -409,7 +402,6 @@ if file_to_process:
         
         df_merged['Cumpl_Act_%'] = (df_merged['Ventas_Real_Act'] / df_merged['Ppto_Real_Act'].replace(0, 1)) * 100
 
-        # Crecimiento de Ventas Vs Año Anterior (AA)
         df_merged['Diff_Ventas_AA'] = df_merged['Ventas_Real_Act'] - df_merged['Ventas_AA_Act']
         df_merged['Var_Ventas_AA_%'] = ((df_merged['Ventas_Real_Act'] - df_merged['Ventas_AA_Act']) / df_merged['Ventas_AA_Act'].replace(0, 1)) * 100
 
@@ -422,7 +414,6 @@ if file_to_process:
         df_merged['GAP_Ticket_$'] = df_merged['Ticket_Act'] - df_merged['Ticket_Objetivo']
         df_merged['Var_Ticket_AA_%'] = ((df_merged['Ticket_Act'] - df_merged['Ticket_AA']) / df_merged['Ticket_AA'].replace(0, 1)) * 100
 
-        # CLASIFICACIÓN DE ESCENARIOS
         def clasificar_escenario(row):
             g_ant, g_act, diff = row['GAP_Ant'], row['GAP_Act'], row['Evolucion_GAP_$']
             if g_act >= 0:
@@ -457,7 +448,6 @@ if file_to_process:
         if solo_pareto: df_base = df_base[df_base['Pareto'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
         if solo_comparable: df_base = df_base[df_base['Comparable_Val'].astype(str).str.upper().str.contains(patron_valid, regex=True, na=False)]
 
-        # DIAGNÓSTICO GERENCIAL CON ENFOQUE PARETO
         def generar_diagnostico_gerencial(df_data):
             v_act = df_data['Ventas_Real_Act'].sum()
             ppto_act = df_data['Ppto_Real_Act'].sum()
@@ -547,7 +537,6 @@ if file_to_process:
 
             return "<br><br>".join(analisis)
 
-        # RENDERIZADO INTEGRAL DE KPIS CON SUMA DE GAP TOTAL Y BOTÓN DE VER DETALLE OSCURO COMPACTO
         def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
@@ -573,7 +562,6 @@ if file_to_process:
             gap_ticket_monto = ticket_act - ticket_obj
             var_ticket_aa = ((ticket_act - ticket_aa) / ticket_aa * 100) if ticket_aa > 0 else 0.0
 
-            # FLECHAS DE EVOLUCIÓN EN TARJETA PRINCIPAL
             if evol_gap_monto >= 0:
                 flecha_gap = "🟢 ▲"
                 col_sub_gap = "#16A34A"
@@ -646,10 +634,9 @@ if file_to_process:
                 )
                 st.plotly_chart(fig_g, use_container_width=True, key=f"gauge_{key_suffix}")
 
-            # SECCIÓN GAP CON SUMA DE VALOR TOTAL Y BOTÓN DE DETALLE COMPACTO OSCURO
+            # SECCIÓN GAP CON SUMATORIA DE MONTO Y BOTÓN
             st.markdown('<div class="gap-section-title">GAP & DISTRIBUCIÓN DE TIENDAS POR ESCENARIO</div>', unsafe_allow_html=True)
             
-            # CÁLCULO DE CANTIDADES Y SUMATORIA DE GAP POR ESCENARIO
             escenarios_info = [
                 ("Pasa de Negativo a Positivo 🟢", "PASA A POSITIVO", "border-green", "#16A34A"),
                 ("Amplió Superávit 🟢", "AMPLIÓ SUPERÁVIT", "border-green", "#16A34A"),
