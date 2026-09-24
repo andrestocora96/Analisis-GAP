@@ -390,7 +390,6 @@ if file_to_process:
 
         # AGREGAR ESTRELLA ⭐ A TODAS LAS TIENDAS PARETO DE FORMA GLOBAL
         patron_p = 'SI|S|1|PARETO|TRUE'
-        es_pareto = df_merged['Pareto'].astype(str).str.upper().str.contains(patron_p, regex=True, na=False)
         df_merged['Tienda'] = df_merged.apply(
             lambda r: f"{r['Tienda']} ⭐" if (str(r['Pareto']).upper().strip() in ['SI', 'S', '1', 'PARETO', 'TRUE']) and not str(r['Tienda']).endswith('⭐') else r['Tienda'],
             axis=1
@@ -413,7 +412,12 @@ if file_to_process:
         df_merged['Diff_Ventas_AA'] = df_merged['Ventas_Real_Act'] - df_merged['Ventas_AA_Act']
         df_merged['Var_Ventas_AA_%'] = ((df_merged['Ventas_Real_Act'] - df_merged['Ventas_AA_Act']) / df_merged['Ventas_AA_Act'].replace(0, 1)) * 100
 
-        df_merged['GAP_Tx_AA'] = df_merged['Tx_Real_Act'] - df_merged['Tx_AA_Act']
+        # CÁLCULOS DE GAP DE TRANSACCIONES (ACTUAL Y ANTERIOR)
+        df_merged['GAP_Tx_AA_Act'] = df_merged['Tx_Real_Act'] - df_merged['Tx_AA_Act']
+        df_merged['GAP_Tx_AA_Ant'] = df_merged['Tx_Real_Ant'] - df_merged['Tx_AA_Ant']
+        df_merged['Evolucion_GAP_Tx'] = df_merged['GAP_Tx_AA_Act'] - df_merged['GAP_Tx_AA_Ant']
+        
+        df_merged['GAP_Tx_AA'] = df_merged['GAP_Tx_AA_Act']
         df_merged['Var_Tx_AA_%'] = ((df_merged['Tx_Real_Act'] - df_merged['Tx_AA_Act']) / df_merged['Tx_AA_Act'].replace(0, 1)) * 100
 
         df_merged['Ticket_Act'] = df_merged['Ventas_Real_Act'] / df_merged['Tx_Real_Act'].replace(0, 1)
@@ -546,7 +550,7 @@ if file_to_process:
 
             return "<br><br>".join(analisis)
 
-        # RENDERIZADO DE KPIS CON FLECHA DE TENDENCIA
+        # RENDERIZADO DE KPIS CON COMPARATIVA COMPLETA DE GAP PPTO Y GAP TRANSACCIONES
         def render_kpi_block(df_scope, key_suffix="main"):
             df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
             num_tiendas = len(df_activas)
@@ -563,7 +567,9 @@ if file_to_process:
 
             tx_act = df_scope['Tx_Real_Act'].sum()
             tx_aa = df_scope['Tx_AA_Act'].sum()
-            gap_tx_aa = tx_act - tx_aa
+            gap_tx_act = df_scope['GAP_Tx_AA_Act'].sum()
+            gap_tx_ant = df_scope['GAP_Tx_AA_Ant'].sum()
+            evol_tx_monto = gap_tx_act - gap_tx_ant
             var_tx_aa = ((tx_act - tx_aa) / tx_aa * 100) if tx_aa > 0 else 0.0
 
             ticket_act = (v_act / tx_act) if tx_act > 0 else 0.0
@@ -572,10 +578,17 @@ if file_to_process:
             gap_ticket_monto = ticket_act - ticket_obj
             var_ticket_aa = ((ticket_act - ticket_aa) / ticket_aa * 100) if ticket_aa > 0 else 0.0
 
+            # FLECHA DE TENDENCIA EN VALOR DE GAP PPTO (VERDE SI MEJORÓ)
             if evol_gap_monto >= 0:
                 flecha_monto = ' <span style="color:#16A34A; font-weight:800;">▲</span>'
             else:
                 flecha_monto = ' <span style="color:#DC2626; font-weight:800;">▼</span>'
+
+            # FLECHA DE TENDENCIA EN VALOR DE GAP TRANSACCIONES (VERDE SI AUMENTÓ / RECORTÓ PÉRDIDA)
+            if evol_tx_monto >= 0:
+                flecha_tx = ' <span style="color:#16A34A; font-weight:800;">▲</span>'
+            else:
+                flecha_tx = ' <span style="color:#DC2626; font-weight:800;">▼</span>'
 
             k1, k2, k3, k4, k5, k6 = st.columns([1, 1, 1, 1, 1.2, 1])
             with k1:
@@ -605,12 +618,12 @@ if file_to_process:
                 </div>
                 """, unsafe_allow_html=True)
             with k4:
-                col_tx_c = "#16A34A" if gap_tx_aa >= 0 else "#DC2626"
+                col_tx_c = "#16A34A" if gap_tx_act >= 0 else "#DC2626"
                 st.markdown(f"""
                 <div class="metric-card card-purple">
                     <div class="card-title">GAP TRANSACCIONES (VS AA)</div>
-                    <div class="card-value" style="color:{col_tx_c};">{gap_tx_aa:+,.0f} Tx</div>
-                    <div class="card-sub" style="color:{col_tx_c}; font-weight:bold;">Var: {var_tx_aa:+.1f}% vs AA</div>
+                    <div class="card-value" style="color:{col_tx_c};">{gap_tx_act:+,.0f} Tx{flecha_tx}</div>
+                    <div class="card-sub">GAP Tx Ant: {gap_tx_ant:+,.0f} Tx</div>
                 </div>
                 """, unsafe_allow_html=True)
             with k5:
