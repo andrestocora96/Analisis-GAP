@@ -4,35 +4,126 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 st.set_page_config(
-    page_title="Tablero Gerencial - Control de GAP y Ventas", 
-    layout="wide"
+    page_title="Informe Gerencial GAP - Juan Valdez", 
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# ESTILOS CSS EJECUTIVOS (TARJETAS BORDEADAS DE COLORES)
+# 🎨 PALETA DE COLORES CORPORATIVA Y ESTILOS CSS PREMIUM JUAN VALDEZ
 st.markdown("""
 <style>
-    .metric-card {
-        background-color: #ffffff;
-        border-radius: 10px;
-        padding: 12px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
-        text-align: center;
-        margin-bottom: 10px;
+    /* Estilo General */
+    .stApp {
+        background-color: #F8FAFC;
     }
-    .card-green { border-left: 5px solid #16A34A; border-top: 1px solid #E5E7EB; border-right: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; }
-    .card-red { border-left: 5px solid #DC2626; border-top: 1px solid #E5E7EB; border-right: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; }
-    .card-yellow { border-left: 5px solid #EAB308; border-top: 1px solid #E5E7EB; border-right: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; }
-    .card-blue { border-left: 5px solid #2563EB; border-top: 1px solid #E5E7EB; border-right: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; }
     
-    .card-title { font-size: 11px; font-weight: 700; color: #4B5563; text-transform: uppercase; margin-bottom: 3px; }
-    .card-value { font-size: 19px; font-weight: 800; margin: 0; }
-    .card-sub { font-size: 11px; color: #6B7280; margin-top: 2px; }
+    /* Header Principal */
+    .jv-header {
+        background: linear-gradient(135deg, #7A0016 0%, #A20021 100%);
+        padding: 20px;
+        border-radius: 12px;
+        color: white;
+        text-align: center;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 12px rgba(122, 0, 22, 0.25);
+    }
+    .jv-header h1 {
+        margin: 0;
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        color: #FFFFFF;
+    }
+    .jv-header p {
+        margin: 5px 0 0 0;
+        font-size: 13px;
+        color: #F1F5F9;
+        opacity: 0.9;
+    }
+
+    /* Tarjetas de KPI Principales */
+    .metric-card {
+        background-color: #FFFFFF;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        text-align: center;
+        height: 100%;
+        transition: transform 0.2s ease;
+    }
+    .card-blue { border-left: 6px solid #2563EB; }
+    .card-red { border-left: 6px solid #DC2626; }
+    .card-green { border-left: 6px solid #16A34A; }
+    .card-yellow { border-left: 6px solid #EAB308; }
+    .card-jv { border-left: 6px solid #A20021; }
+    
+    .card-title {
+        font-size: 11px;
+        font-weight: 800;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 6px;
+    }
+    .card-value {
+        font-size: 22px;
+        font-weight: 800;
+        margin: 2px 0;
+    }
+    .card-sub {
+        font-size: 11px;
+        color: #64748B;
+        font-weight: 500;
+    }
+
+    /* Tarjetas de Gerentes (Parte Inferior Pestaña 1) */
+    .gerente-box {
+        background-color: #FFFFFF;
+        border-radius: 12px;
+        border: 1px solid #E2E8F0;
+        padding: 18px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .gerente-title {
+        font-size: 16px;
+        font-weight: 800;
+        color: #7A0016;
+        border-bottom: 2px solid #F1F5F9;
+        padding-bottom: 8px;
+        margin-bottom: 12px;
+    }
+    
+    /* Pestañas */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 45px;
+        background-color: #FFFFFF;
+        border-radius: 8px;
+        padding: 0px 20px;
+        font-weight: 700;
+        color: #475569;
+        border: 1px solid #E2E8F0;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #A20021 !important;
+        color: #FFFFFF !important;
+        border-color: #A20021 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h2 style='text-align: center; color: #1E3A8A; font-weight: 800;'>TABLERO EJECUTIVO DE DESEMPEÑO Y CONTROL DE GAP</h2>", unsafe_allow_html=True)
+# CABECERA INSTITUCIONAL
+st.markdown("""
+<div class="jv-header">
+    <h1>INFORME GERENCIAL GAP VS PRESUPUESTO DE VENTAS</h1>
+    <p>Control de Desempeño Comercial y Evolución de Brechas</p>
+</div>
+""", unsafe_allow_html=True)
 
-# FUNCIÓN DE LIMPIEZA
+# 1. FUNCIÓN DE LIMPIEZA MONETARIA
 def limpiar_monto(val):
     if pd.isna(val):
         return 0.0
@@ -51,7 +142,6 @@ def limpiar_monto(val):
 @st.cache_data
 def cargar_datos(file):
     xls = pd.ExcelFile(file)
-    
     df_bd = pd.DataFrame()
     if 'BASE DE DATOS' in xls.sheet_names:
         df_bd = pd.read_excel(xls, sheet_name='BASE DE DATOS')
@@ -69,10 +159,8 @@ def cargar_datos(file):
         df = df[~df['Tienda'].astype(str).str.contains('Total|general', case=False, na=False)]
         df['Tienda_Clean'] = df['Tienda'].astype(str).str.strip().str.upper()
         df['Ciclo'] = str(h)
-        
         df['Ventas_Real'] = df['Ventas Act'].apply(limpiar_monto)
         df['Ppto_Real'] = df['Ppto'].apply(limpiar_monto)
-        
         dfs.append(df)
         
     if dfs:
@@ -84,16 +172,16 @@ def cargar_datos(file):
         return df_tot, hojas
     return pd.DataFrame(), []
 
-# Cargar Excel
-st.sidebar.header("📁 Cargar Datos")
-uploaded_file = st.sidebar.file_uploader("Sube ANALISIS GAP.xlsx", type=['xlsx'])
+# CARGA DE DATOS
+st.sidebar.header("📁 Configuración de Datos")
+uploaded_file = st.sidebar.file_uploader("Cargar ANALISIS GAP.xlsx", type=['xlsx'])
 
 if uploaded_file:
     df_tot, lista_ciclos = cargar_datos(uploaded_file)
     
     if len(lista_ciclos) >= 2:
-        c_act = st.sidebar.selectbox("Semana / Corte Actual:", lista_ciclos, index=len(lista_ciclos)-1)
-        c_ant = st.sidebar.selectbox("Semana / Corte Anterior:", lista_ciclos, index=max(0, len(lista_ciclos)-2))
+        c_act = st.sidebar.selectbox("Semana Actual / Corte:", lista_ciclos, index=len(lista_ciclos)-1)
+        c_ant = st.sidebar.selectbox("Semana Anterior / Corte:", lista_ciclos, index=max(0, len(lista_ciclos)-2))
         
         df_act = df_tot[df_tot['Ciclo'] == c_act].copy()
         df_ant = df_tot[df_tot['Ciclo'] == c_ant].copy()
@@ -113,13 +201,12 @@ if uploaded_file:
         for col in ['Ventas_Real_Act', 'Ppto_Real_Act', 'Ventas_Real_Ant', 'Ppto_Real_Ant']:
             df_merged[col] = df_merged[col].fillna(0.0)
             
-        # GAP = Ventas - Presupuesto
+        # CÁLCULO DE GAP = Ventas - Presupuesto
         df_merged['GAP_Ant'] = df_merged['Ventas_Real_Ant'] - df_merged['Ppto_Real_Ant']
         df_merged['GAP_Act'] = df_merged['Ventas_Real_Act'] - df_merged['Ppto_Real_Act']
         df_merged['Evolucion_GAP_$'] = df_merged['GAP_Act'] - df_merged['GAP_Ant']
         
         df_merged['Cumpl_Act_%'] = (df_merged['Ventas_Real_Act'] / df_merged['Ppto_Real_Act'].replace(0, 1)) * 100
-        df_merged['Var_Ventas_%'] = ((df_merged['Ventas_Real_Act'] - df_merged['Ventas_Real_Ant']) / df_merged['Ventas_Real_Ant'].replace(0, 1)) * 100
 
         # LÓGICA DE ESCENARIOS
         def clasificar_escenario(row):
@@ -142,50 +229,19 @@ if uploaded_file:
 
         df_merged['Escenario'] = df_merged.apply(clasificar_escenario, axis=1)
 
-        # FILTROS PRINCIPALES
-        st.markdown("---")
-        f1, f2, f3 = st.columns(3)
-        with f1:
-            gerentes = ["Todas las Gerencias"] + sorted([str(x) for x in df_merged['Gerente'].dropna().unique() if str(x) != 'nan'])
-            sel_ger = st.selectbox("GERENTE / REGIONAL:", gerentes)
-        with f2:
-            df_temp_sup = df_merged if sel_ger == "Todas las Gerencias" else df_merged[df_merged['Gerente'] == sel_ger]
-            supervisores = ["Todos"] + sorted([str(x) for x in df_temp_sup['Supervisor'].dropna().unique() if str(x) != 'nan'])
-            sel_sup = st.selectbox("SUPERVISOR:", supervisores)
-        with f3:
-            df_temp_tie = df_temp_sup if sel_sup == "Todos" else df_temp_sup[df_temp_sup['Supervisor'] == sel_sup]
-            tiendas = ["Todas"] + sorted([str(x) for x in df_temp_tie['Tienda'].dropna().unique() if str(x) != 'nan'])
-            sel_tienda = st.selectbox("TIENDA / PUNTO:", tiendas)
-            
-        df_f = df_merged.copy()
-        if sel_ger != "Todas las Gerencias": df_f = df_f[df_f['Gerente'] == sel_ger]
-        if sel_sup != "Todos": df_f = df_f[df_f['Supervisor'] == sel_sup]
-        if sel_tienda != "Todas": df_f = df_f[df_f['Tienda'] == sel_tienda]
-
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        # ESTRUCTURA EN PESTAÑAS (LO PRIMERO QUE APARECE ES EL RESUMEN DE GERENTES)
-        tab_gerencial, tab_supervisores, tab_tiendas = st.tabs([
-            "👔 Resumen Ejecutivo por Gerente", 
-            "👤 Análisis por Supervisor", 
-            "🏬 Detalle por Tienda"
-        ])
-
-        # PESTAÑA 1: RESUMEN EJECUTIVO DE GERENTES (VISTA PRINCIPAL AL ABRIR)
-        with tab_gerencial:
-            # KPIS PROPIOS DE LA GERENCIA / REGIONAL SELECCIONADA
-            num_tiendas = len(df_f)
-            v_act = df_f['Ventas_Real_Act'].sum()
-            ppto_act = df_f['Ppto_Real_Act'].sum()
-            gap_act = df_f['GAP_Act'].sum()
-            gap_ant = df_f['GAP_Ant'].sum()
-            evol_gap = df_f['Evolucion_GAP_$'].sum()
+        # RENDERIZADO DE MÉTRO DE TARJETAS SUPERIORES
+        def render_kpi_block(df_scope, title_label="TOTAL COMPAÑÍA"):
+            # Filtrar solo tiendas activas que reportaron venta en la semana actual
+            df_activas = df_scope[df_scope['Ventas_Real_Act'] > 0]
+            num_tiendas = len(df_activas)
+            v_act = df_scope['Ventas_Real_Act'].sum()
+            ppto_act = df_scope['Ppto_Real_Act'].sum()
+            gap_act = df_scope['GAP_Act'].sum()
+            gap_ant = df_scope['GAP_Ant'].sum()
+            evol_gap = df_scope['Evolucion_GAP_$'].sum()
             cumpl_gen = (v_act / ppto_act * 100) if ppto_act > 0 else 0.0
 
-            st.markdown(f"### 🎯 KPIs Consolidados - {sel_ger}")
-
             k1, k2, k3, k4 = st.columns([1, 1, 1.2, 1])
-            
             with k1:
                 st.markdown(f"""
                 <div class="metric-card card-blue">
@@ -194,26 +250,23 @@ if uploaded_file:
                     <div class="card-sub">Ventas: ${v_act:,.0f}</div>
                 </div>
                 """, unsafe_allow_html=True)
-
             with k2:
-                color_gap = "#16A34A" if gap_act >= 0 else "#DC2626"
+                col_g = "#16A34A" if gap_act >= 0 else "#DC2626"
                 st.markdown(f"""
                 <div class="metric-card {'card-green' if gap_act>=0 else 'card-red'}">
                     <div class="card-title">GAP PPTO ACTUAL</div>
-                    <div class="card-value" style="color:{color_gap};">${gap_act:,.0f}</div>
+                    <div class="card-value" style="color:{col_g};">${gap_act:,.0f}</div>
                     <div class="card-sub">GAP Anterior: ${gap_ant:,.0f}</div>
                 </div>
                 """, unsafe_allow_html=True)
-
             with k3:
-                fig_gauge = go.Figure(go.Indicator(
+                fig_g = go.Figure(go.Indicator(
                     mode = "gauge+number",
                     value = cumpl_gen,
                     number = {'suffix': "%", 'valueformat': ".1f"},
-                    title = {'text': "CUMPLIMIENTO PPTO", 'font': {'size': 12, 'color': '#374151'}},
                     gauge = {
                         'axis': {'range': [0, 120]},
-                        'bar': {'color': "#16A34A" if cumpl_gen >= 100 else "#DC2626"},
+                        'bar': {'color': "#16A34A" if cumpl_gen >= 100 else "#A20021"},
                         'steps': [
                             {'range': [0, 85], 'color': "#FEE2E2"},
                             {'range': [85, 100], 'color': "#FEF3C7"},
@@ -221,178 +274,135 @@ if uploaded_file:
                         ]
                     }
                 ))
-                fig_gauge.update_layout(height=140, margin=dict(l=10, r=10, t=20, b=10))
-                st.plotly_chart(fig_gauge, use_container_width=True)
-
+                fig_g.update_layout(height=130, margin=dict(l=10, r=10, t=10, b=10))
+                st.plotly_chart(fig_g, use_container_width=True)
             with k4:
-                color_evol = "#16A34A" if evol_gap >= 0 else "#DC2626"
+                col_e = "#16A34A" if evol_gap >= 0 else "#DC2626"
                 st.markdown(f"""
                 <div class="metric-card {'card-green' if evol_gap>=0 else 'card-red'}">
                     <div class="card-title">EVOLUCIÓN DEL GAP ($)</div>
-                    <div class="card-value" style="color:{color_evol};">${evol_gap:+,.0f}</div>
-                    <div class="card-sub" style="font-weight:bold; color:{color_evol};">
+                    <div class="card-value" style="color:{col_e};">${evol_gap:+,.0f}</div>
+                    <div class="card-sub" style="font-weight:bold; color:{col_e};">
                         {'Avanzó Posición 🟢' if evol_gap>=0 else 'Aumentó Faltante 🔴'}
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
-
-            # LOS 6 BOTONES/TARJETAS DE ESCENARIOS CON BORDES DE COLOR
-            st.markdown("#### 🏬 ESTADO DE TIENDAS POR ESCENARIO")
-            conteo = df_f['Escenario'].value_counts()
+            st.markdown("<h4 style='text-align:left; color:#334155; font-size:14px; font-weight:800;'>🏬 ESTADO DE TIENDAS POR ESCENARIO</h4>", unsafe_allow_html=True)
             
+            conteo = df_activas['Escenario'].value_counts()
             e1, e2, e3, e4, e5, e6 = st.columns(6)
             with e1:
-                st.markdown(f"""<div class="metric-card card-green"><div class="card-title">Pasa a Positivo</div><div class="card-value" style="color:#16A34A;">{conteo.get('Pasa de Negativo a Positivo 🟢', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div class="metric-card card-green"><div class="card-title">PASA A POSITIVO</div><div class="card-value" style="color:#16A34A;">{conteo.get('Pasa de Negativo a Positivo 🟢', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
             with e2:
-                st.markdown(f"""<div class="metric-card card-green"><div class="card-title">Amplió Superávit</div><div class="card-value" style="color:#16A34A;">{conteo.get('Amplió Superávit 🟢', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div class="metric-card card-green"><div class="card-title">AMPLIÓ SUPERÁVIT</div><div class="card-value" style="color:#16A34A;">{conteo.get('Amplió Superávit 🟢', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
             with e3:
-                st.markdown(f"""<div class="metric-card card-green"><div class="card-title">Mantuvo Superávit</div><div class="card-value" style="color:#16A34A;">{conteo.get('Mantuvo Superávit 🟢', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div class="metric-card card-green"><div class="card-title">MANTUVO SUPERÁVIT</div><div class="card-value" style="color:#16A34A;">{conteo.get('Mantuvo Superávit 🟢', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
             with e4:
-                st.markdown(f"""<div class="metric-card card-green"><div class="card-title">Recortó Faltante</div><div class="card-value" style="color:#16A34A;">{conteo.get('Recortó Faltante 🟢', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div class="metric-card card-green"><div class="card-title">RECORTÓ FALTANTE</div><div class="card-value" style="color:#16A34A;">{conteo.get('Recortó Faltante 🟢', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
             with e5:
-                st.markdown(f"""<div class="metric-card card-yellow"><div class="card-title">Mantuvo Faltante</div><div class="card-value" style="color:#EAB308;">{conteo.get('Mantuvo Faltante 🟡', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div class="metric-card card-yellow"><div class="card-title">MANTUVO FALTANTE</div><div class="card-value" style="color:#EAB308;">{conteo.get('Mantuvo Faltante 🟡', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
             with e6:
-                st.markdown(f"""<div class="metric-card card-red"><div class="card-title">Aumentó Faltante</div><div class="card-value" style="color:#DC2626;">{conteo.get('Aumentó Faltante 🔴', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div class="metric-card card-red"><div class="card-title">AUMENTÓ FALTANTE</div><div class="card-value" style="color:#DC2626;">{conteo.get('Aumentó Faltante 🔴', 0)}</div><div class="card-sub">Tiendas</div></div>""", unsafe_allow_html=True)
+
+        # ESTRUCTURA EN 2 PESTAÑAS PRINCIPALES
+        tab1, tab2 = st.tabs(["📊 Informe Gerencial GAP", "🔍 Análisis por Gerencia"])
+
+        # ==============================================================================
+        # PESTAÑA 1: INFORME GERENCIAL GAP (RESUMEN GENERAL + CADA GERENTE)
+        # ==============================================================================
+        with tab1:
+            st.markdown("### 🏢 RESUMEN GENERAL DE LA COMPAÑÍA")
+            render_kpi_block(df_merged, "COMPAÑÍA")
+            
+            st.markdown("---")
+            st.markdown("### 👔 DETALLE CONSOLIDADO POR GERENTE REGIONAL")
+            
+            # Gerentes con actividad real
+            lista_gerentes = sorted([g for g in df_merged['Gerente'].dropna().unique() if g != 'nan'])
+            
+            for ger in lista_gerentes:
+                df_g = df_merged[df_merged['Gerente'] == ger]
+                # Solo renderizamos si la gerencia tiene tiendas activas en el periodo
+                if df_g['Ventas_Real_Act'].sum() > 0 or df_g['Ppto_Real_Act'].sum() > 0:
+                    with st.container():
+                        st.markdown(f"""
+                        <div class="gerente-box">
+                            <div class="gerente-title">📍 GERENCIA REGIONAL: {ger.upper()}</div>
+                        """, unsafe_allow_html=True)
+                        
+                        render_kpi_block(df_g, ger)
+                        
+                        st.markdown("</div>", unsafe_allow_html=True)
+
+        # ==============================================================================
+        # PESTAÑA 2: ANÁLISIS POR GERENCIA (INTERACTIVA SUPERVISOR Y TIENDAS)
+        # ==============================================================================
+        with tab2:
+            st.markdown("### 🎯 FILTROS DE ANÁLISIS DETALLADO")
+            
+            f1, f2 = st.columns(2)
+            with f1:
+                gerentes_sel = ["Todos"] + sorted([g for g in df_merged['Gerente'].dropna().unique() if str(g) != 'nan'])
+                s_ger = st.selectbox("Seleccionar Gerente:", gerentes_sel, key="tab2_ger")
+            with f2:
+                df_temp = df_merged if s_ger == "Todos" else df_merged[df_merged['Gerente'] == s_ger]
+                sups_sel = ["Todos"] + sorted([s for s in df_temp['Supervisor'].dropna().unique() if str(s) != 'nan'])
+                s_sup = st.selectbox("Seleccionar Supervisor:", sups_sel, key="tab2_sup")
+
+            df_tab2 = df_merged.copy()
+            if s_ger != "Todos": df_tab2 = df_tab2[df_tab2['Gerente'] == s_ger]
+            if s_sup != "Todos": df_tab2 = df_tab2[df_tab2['Supervisor'] == s_sup]
 
             st.markdown("---")
+            st.markdown(f"### 📈 INDICADORES CLAVE DE GESTIÓN ({s_sup if s_sup != 'Todos' else (s_ger if s_ger != 'Todos' else 'GLOBAL')})")
+            render_kpi_block(df_tab2, "FILTRADO")
 
-            # TABLA COMPARATIVA CONSOLIDADA POR GERENCIA
-            st.markdown("### 📊 COMPARATIVO DE GERENCIAS REGIONALES")
+            st.markdown("---")
+            st.markdown("### 👔 CUMPLIMIENTO INTERACTIVO POR SUPERVISOR")
             
-            df_ger = df_f.groupby('Gerente').agg(
-                Num_Tiendas=('Tienda', 'count'),
+            df_sup_agg = df_tab2.groupby(['Supervisor', 'Gerente']).agg(
                 Ventas_Act=('Ventas_Real_Act', 'sum'),
                 Ppto_Act=('Ppto_Real_Act', 'sum'),
-                GAP_Ant=('GAP_Ant', 'sum'),
-                GAP_Act=('GAP_Act', 'sum'),
-                Evolucion_GAP=('Evolucion_GAP_$', 'sum')
-            ).reset_index()
-
-            df_ger['Cumplimiento_%'] = (df_ger['Ventas_Act'] / df_ger['Ppto_Act'].replace(0, 1)) * 100
-            df_ger = df_ger.sort_values(by='Cumplimiento_%', ascending=False)
-
-            st.dataframe(
-                df_ger[[
-                    'Gerente', 'Num_Tiendas', 'Cumplimiento_%', 
-                    'Ventas_Act', 'Ppto_Act', 'GAP_Act', 'GAP_Ant', 'Evolucion_GAP'
-                ]].style.format({
-                    'Num_Tiendas': '{:,.0f}',
-                    'Cumplimiento_%': '{:.1f}%',
-                    'Ventas_Act': '${:,.0f}',
-                    'Ppto_Act': '${:,.0f}',
-                    'GAP_Act': '${:,.0f}',
-                    'GAP_Ant': '${:,.0f}',
-                    'Evolucion_GAP': '${:+,.0f}'
-                }),
-                use_container_width=True
-            )
-
-        # PESTAÑA 2: ANÁLISIS POR SUPERVISOR
-        with tab_supervisores:
-            st.markdown("### 👔 DESEMPEÑO DE SUPERVISORES")
-            
-            df_sup = df_f.groupby(['Supervisor', 'Gerente']).agg(
-                Num_Tiendas=('Tienda', 'count'),
-                Ventas_Act=('Ventas_Real_Act', 'sum'),
-                Ppto_Act=('Ppto_Real_Act', 'sum'),
-                GAP_Act=('GAP_Act', 'sum'),
                 Evolucion_GAP=('Evolucion_GAP_$', 'sum')
             ).reset_index()
             
-            df_sup['Cumplimiento_%'] = (df_sup['Ventas_Act'] / df_sup['Ppto_Act'].replace(0, 1)) * 100
-            df_sup = df_sup.sort_values(by='Cumplimiento_%', ascending=True)
+            df_sup_agg['Cumpl_ %'] = (df_sup_agg['Ventas_Act'] / df_sup_agg['Ppto_Act'].replace(0, 1)) * 100
+            df_sup_agg = df_sup_agg.sort_values(by='Cumpl_ %', ascending=True)
 
             fig_sup = px.bar(
-                df_sup,
-                y='Supervisor', x='Cumplimiento_%',
-                color='Cumplimiento_%',
-                color_continuous_scale=['#DC2626', '#FEF3C7', '#16A34A'],
+                df_sup_agg,
+                y='Supervisor', x='Cumpl_ %',
+                color='Cumpl_ %',
+                color_continuous_scale=['#A20021', '#FEF3C7', '#16A34A'],
                 orientation='h',
-                title="CUMPLIMIENTO DE PPTO (%) POR SUPERVISOR",
+                title="CUMPLIMIENTO DE PRESUPUESTO (%) POR SUPERVISOR",
                 text_auto='.1f%'
             )
-            fig_sup.update_layout(height=max(350, len(df_sup) * 30))
+            fig_sup.update_layout(height=max(350, len(df_sup_agg) * 32))
             st.plotly_chart(fig_sup, use_container_width=True)
 
-            st.dataframe(
-                df_sup.sort_values(by='Cumplimiento_%', ascending=False)[[
-                    'Supervisor', 'Gerente', 'Num_Tiendas', 'Cumplimiento_%', 'Ventas_Act', 'Ppto_Act', 'GAP_Act', 'Evolucion_GAP'
-                ]].style.format({
-                    'Num_Tiendas': '{:,.0f}',
-                    'Cumplimiento_%': '{:.1f}%',
-                    'Ventas_Act': '${:,.0f}',
-                    'Ppto_Act': '${:,.0f}',
-                    'GAP_Act': '${:,.0f}',
-                    'Evolucion_GAP': '${:+,.0f}'
-                }),
-                use_container_width=True
-            )
-
-        # PESTAÑA 3: ANÁLISIS POR TIENDA
-        with tab_tiendas:
-            st.markdown("### 📈 EVOLUCIÓN DEL GAP POR TIENDA")
-            
-            c_graf, c_sem = st.columns([3, 1])
-
-            with c_sem:
-                filtro_sem = st.radio(
-                    "Filtrar tiendas por:",
-                    ["🟢 Solo Positivos / Avanzó", "🔴 Solo Negativos / Faltante", "Todas las Tiendas"],
-                    index=2
-                )
-                
-                df_graf = df_f.copy()
-                if "Positivos" in filtro_sem:
-                    df_graf = df_graf[df_graf['Evolucion_GAP_$'] >= 0]
-                elif "Negativos" in filtro_sem:
-                    df_graf = df_graf[df_graf['Evolucion_GAP_$'] < 0]
-
-            with c_graf:
-                fig_bar = px.bar(
-                    df_graf.sort_values(by='Evolucion_GAP_$', ascending=True),
-                    y='Tienda', x='Evolucion_GAP_$',
-                    color='Escenario',
-                    color_discrete_map={
-                        'Pasa de Negativo a Positivo 🟢': '#15803D',
-                        'Amplió Superávit 🟢': '#16A34A',
-                        'Mantuvo Superávit 🟢': '#22C55E',
-                        'Recortó Faltante 🟢': '#4ADE80',
-                        'Mantuvo Faltante 🟡': '#EAB308',
-                        'Aumentó Faltante 🔴': '#DC2626'
-                    },
-                    orientation='h',
-                    title="VARIACIÓN DE GAP ($) - ACTUAL VS ANTERIOR"
-                )
-                fig_bar.update_layout(height=max(400, len(df_graf) * 25))
-                st.plotly_chart(fig_bar, use_container_width=True)
-
             st.markdown("---")
-            st.markdown("### 📋 TABLA DETALLADA POR TIENDA (ORDENADA POR CUMPLIMIENTO %)")
-
-            tabla_tiendas = df_f.sort_values(by='Cumpl_Act_%', ascending=False)[[
-                'Tienda', 'Gerente', 'Supervisor', 'Cumpl_Act_%', 'Var_Ventas_%',
-                'Ventas_Real_Act', 'Ppto_Real_Act', 'GAP_Act', 'GAP_Ant', 'Evolucion_GAP_$', 'Escenario'
-            ]].copy()
-
-            tabla_tiendas.columns = [
-                'Tienda', 'Gerente', 'Supervisor', 'Cumplimiento %', 'Var Ventas %',
-                'Ventas Act', 'Ppto Act', 'GAP Act ($)', 'GAP Ant ($)', 'Evolución GAP ($)', 'Escenario'
-            ]
-
-            st.dataframe(
-                tabla_tiendas.style.format({
-                    'Cumplimiento %': '{:.1f}%',
-                    'Var Ventas %': '{:+.1f}%',
-                    'Ventas Act': '${:,.0f}',
-                    'Ppto Act': '${:,.0f}',
-                    'GAP Act ($)': '${:,.0f}',
-                    'GAP Ant ($)': '${:,.0f}',
-                    'Evolución GAP ($)': '${:+,.0f}'
-                }),
-                use_container_width=True
+            st.markdown("### 🏬 EVOLUCIÓN DEL GAP POR TIENDA (BARRAS HORIZONTALES)")
+            
+            fig_tiendas = px.bar(
+                df_tab2.sort_values(by='Evolucion_GAP_$', ascending=True),
+                y='Tienda', x='Evolucion_GAP_$',
+                color='Escenario',
+                color_discrete_map={
+                    'Pasa de Negativo a Positivo 🟢': '#15803D',
+                    'Amplió Superávit 🟢': '#16A34A',
+                    'Mantuvo Superávit 🟢': '#22C55E',
+                    'Recortó Faltante 🟢': '#4ADE80',
+                    'Mantuvo Faltante 🟡': '#EAB308',
+                    'Aumentó Faltante 🔴': '#A20021'
+                },
+                orientation='h',
+                title="VARIACIÓN DE GAP DE PPTO ($) POR TIENDA"
             )
+            fig_tiendas.update_layout(height=max(400, len(df_tab2) * 22))
+            st.plotly_chart(fig_tiendas, use_container_width=True)
 
 else:
-    st.info("👈 Por favor sube el archivo ANALISIS GAP.xlsx en el menú lateral para activar el tablero.")
+    st.info("👈 Por favor sube el archivo ANALISIS GAP.xlsx en el menú lateral para desplegar el informe gerencial.")
